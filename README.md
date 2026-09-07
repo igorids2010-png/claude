@@ -42,6 +42,42 @@ Bot com visual moderno e simples que busca no Google Maps lugares de um determin
 
 4. Acesse `http://localhost:3000` no navegador.
 
+## Deploy na Vercel
+
+O projeto já está estruturado para rodar na Vercel sem configuração extra:
+
+- `public/` é servido como site estático (é onde ficam `index.html`, `style.css` e `script.js`).
+- `api/search.js` vira automaticamente uma Serverless Function em `/api/search`.
+- `lib/places.js` tem a lógica de busca compartilhada entre o servidor local (`server.js`) e a função da Vercel.
+
+### Passo a passo
+
+1. Instale a CLI da Vercel (se ainda não tiver):
+
+   ```bash
+   npm install -g vercel
+   ```
+
+2. Rode o deploy a partir da raiz do projeto e siga as instruções (login, nome do projeto, etc.):
+
+   ```bash
+   vercel
+   ```
+
+3. Configure a variável de ambiente com sua chave da API (pode ser feito pela CLI ou pelo painel do projeto em vercel.com → Settings → Environment Variables):
+
+   ```bash
+   vercel env add GOOGLE_MAPS_API_KEY
+   ```
+
+4. Faça o deploy de produção:
+
+   ```bash
+   vercel --prod
+   ```
+
+Alternativa: conecte o repositório do GitHub diretamente pelo painel da Vercel ("Add New Project" → selecione o repositório) e adicione a variável `GOOGLE_MAPS_API_KEY` em Settings → Environment Variables antes do primeiro deploy.
+
 ## Observações
 
 - A API do Google Places retorna no máximo 60 resultados por busca (3 páginas de 20), então buscas muito amplas (ex: "restaurantes" sem localização, em uma cidade grande) mostrarão apenas os 60 primeiros lugares retornados pelo Google.
