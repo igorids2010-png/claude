@@ -4,10 +4,16 @@ Bot com visual moderno e simples que busca no Google Maps lugares de um determin
 
 ## Como funciona
 
-1. Você digita o **ramo** (ex: "restaurantes", "salões de beleza") e opcionalmente a **localização** (ex: "Belo Horizonte, MG").
-2. O servidor consulta a Google Places API (Text Search) para listar os lugares.
-3. Para cada lugar encontrado, ele busca os detalhes e verifica o campo `website`.
+1. Você digita o **ramo** (ex: "restaurantes", "salões de beleza") e escolhe como localizar:
+   - clicando em **"Usar minha localização atual"** (o navegador pede permissão de geolocalização e você escolhe o raio de busca: 1 a 20 km); ou
+   - digitando uma **localização** manualmente (ex: "Belo Horizonte, MG").
+2. O servidor consulta a Google Places API — **Nearby Search** quando é usada a localização atual, ou **Text Search** quando é digitado um lugar.
+3. Para cada lugar encontrado, ele busca os detalhes na mesma API e verifica o campo `website`.
 4. Só são exibidos os lugares **sem site**, com nome, endereço, telefone, avaliação e link para o Google Maps.
+
+O Google Maps (Places API) é a única fonte de dados: é ele quem decide se um estabelecimento existe, onde fica e se tem site cadastrado.
+
+> A geolocalização do navegador só funciona em contexto seguro (HTTPS ou `localhost`) — funciona tanto rodando local quanto no deploy da Vercel.
 
 ## Pré-requisitos
 

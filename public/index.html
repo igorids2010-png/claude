@@ -28,6 +28,18 @@
       </button>
     </form>
 
+    <div class="location-tools">
+      <button type="button" id="geo-button" class="geo-btn">📍 Usar minha localização atual</button>
+      <select id="raio" class="raio-select" hidden>
+        <option value="1000">Raio: 1 km</option>
+        <option value="3000">Raio: 3 km</option>
+        <option value="5000" selected>Raio: 5 km</option>
+        <option value="10000">Raio: 10 km</option>
+        <option value="20000">Raio: 20 km</option>
+      </select>
+      <span id="geo-status" class="geo-status" hidden></span>
+    </div>
+
     <section id="status" class="status" hidden></section>
 
     <section id="summary" class="summary" hidden></section>

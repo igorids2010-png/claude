@@ -127,6 +127,56 @@ body {
   transform: none;
 }
 
+.location-tools {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.geo-btn {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.geo-btn:hover {
+  border-color: var(--accent-soft);
+  background: rgba(108, 92, 231, 0.12);
+}
+
+.geo-btn.active {
+  border-color: var(--accent-2);
+  background: rgba(0, 194, 168, 0.12);
+  color: var(--accent-2);
+}
+
+.raio-select {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.geo-status {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.geo-status.error {
+  color: var(--danger);
+}
+
 .status {
   margin-top: 24px;
   text-align: center;

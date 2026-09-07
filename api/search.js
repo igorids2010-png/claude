@@ -12,6 +12,9 @@ module.exports = async (req, res) => {
 
   const ramo = (req.query.ramo || '').toString().trim();
   const local = (req.query.local || '').toString().trim();
+  const lat = req.query.lat !== undefined ? Number(req.query.lat) : undefined;
+  const lng = req.query.lng !== undefined ? Number(req.query.lng) : undefined;
+  const raio = req.query.raio !== undefined ? Number(req.query.raio) : undefined;
 
   if (!ramo) {
     res.status(400).json({ error: 'Informe o ramo de negócio que deseja buscar.' });
@@ -19,7 +22,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const result = await searchSemSite(API_KEY, { ramo, local });
+    const result = await searchSemSite(API_KEY, { ramo, local, lat, lng, raio });
     res.status(200).json(result);
   } catch (err) {
     const status = err.status === 'REQUEST_DENIED' ? 401 : 502;

@@ -3,6 +3,79 @@ const button = document.getElementById('search-button');
 const statusEl = document.getElementById('status');
 const summaryEl = document.getElementById('summary');
 const resultsEl = document.getElementById('results');
+const localInput = document.getElementById('local');
+const geoButton = document.getElementById('geo-button');
+const raioSelect = document.getElementById('raio');
+const geoStatusEl = document.getElementById('geo-status');
+
+let coordsAtuais = null;
+
+function showGeoStatus(message, isError = false) {
+  geoStatusEl.hidden = false;
+  geoStatusEl.classList.toggle('error', isError);
+  geoStatusEl.textContent = message;
+}
+
+function clearGeoStatus() {
+  geoStatusEl.hidden = true;
+  geoStatusEl.textContent = '';
+}
+
+function ativarLocalizacaoAtual(coords) {
+  coordsAtuais = coords;
+  localInput.value = '';
+  localInput.disabled = true;
+  localInput.placeholder = 'Usando sua localização atual';
+  raioSelect.hidden = false;
+  geoButton.textContent = '✕ Remover localização atual';
+  geoButton.classList.add('active');
+  showGeoStatus('📍 Localização atual ativada — a busca vai usar o raio selecionado ao lado.');
+}
+
+function desativarLocalizacaoAtual() {
+  coordsAtuais = null;
+  localInput.disabled = false;
+  localInput.placeholder = 'ex: São Paulo, SP';
+  raioSelect.hidden = true;
+  geoButton.textContent = '📍 Usar minha localização atual';
+  geoButton.classList.remove('active');
+  clearGeoStatus();
+}
+
+geoButton.addEventListener('click', () => {
+  if (coordsAtuais) {
+    desativarLocalizacaoAtual();
+    return;
+  }
+
+  if (!('geolocation' in navigator)) {
+    showGeoStatus('Seu navegador não suporta geolocalização. Digite a localização manualmente.', true);
+    return;
+  }
+
+  geoButton.disabled = true;
+  showGeoStatus('Obtendo sua localização...');
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      geoButton.disabled = false;
+      ativarLocalizacaoAtual({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+    },
+    (err) => {
+      geoButton.disabled = false;
+      const mensagens = {
+        1: 'Permissão de localização negada. Permita o acesso ou digite a localização manualmente.',
+        2: 'Não foi possível determinar sua localização agora.',
+        3: 'Tempo esgotado ao tentar obter sua localização.',
+      };
+      showGeoStatus(mensagens[err.code] || 'Não foi possível obter sua localização.', true);
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+});
 
 function setLoading(isLoading) {
   button.disabled = isLoading;
@@ -67,17 +140,28 @@ form.addEventListener('submit', async (event) => {
   event.preventDefault();
 
   const ramo = document.getElementById('ramo').value.trim();
-  const local = document.getElementById('local').value.trim();
+  const local = localInput.value.trim();
 
   if (!ramo) return;
 
   resultsEl.innerHTML = '';
   summaryEl.hidden = true;
   setLoading(true);
-  showStatus('Buscando lugares no Google Maps...');
+  showStatus(
+    coordsAtuais ? 'Buscando lugares perto de você no Google Maps...' : 'Buscando lugares no Google Maps...'
+  );
 
   try {
-    const params = new URLSearchParams({ ramo, local });
+    const params = new URLSearchParams({ ramo });
+
+    if (coordsAtuais) {
+      params.set('lat', coordsAtuais.lat);
+      params.set('lng', coordsAtuais.lng);
+      params.set('raio', raioSelect.value);
+    } else {
+      params.set('local', local);
+    }
+
     const response = await fetch(`/api/search?${params.toString()}`);
     const data = await response.json();
 
