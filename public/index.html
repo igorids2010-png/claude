@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sem Site Bot — Encontre clientes em potencial</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="hero-icon">📍</div>
+      <h1>Sem Site Bot</h1>
+      <p>Encontre negócios no Google Maps que ainda não têm site.</p>
+    </header>
+
+    <form id="search-form" class="search-card">
+      <div class="field">
+        <label for="ramo">Ramo de negócio</label>
+        <input id="ramo" name="ramo" type="text" placeholder="ex: dentistas, restaurantes, salões de beleza" required />
+      </div>
+      <div class="field">
+        <label for="local">Localização</label>
+        <input id="local" name="local" type="text" placeholder="ex: São Paulo, SP" />
+      </div>
+      <button type="submit" id="search-button">
+        <span class="btn-label">Buscar</span>
+      </button>
+    </form>
+
+    <section id="status" class="status" hidden></section>
+
+    <section id="summary" class="summary" hidden></section>
+
+    <section id="results" class="results"></section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
