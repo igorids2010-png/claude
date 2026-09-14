@@ -3,173 +3,148 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Brasa° Burger — Sabor que atravessa a tela</title>
+<title>Brasa° Burger — Fome de algo épico?</title>
 <meta name="description" content="Hambúrguer artesanal grelhado na brasa. Peça agora e receba fresquinho em minutos.">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <script>document.documentElement.classList.add('js');</script>
 
-<!-- Sprite SVG único: o mesmo desenho do hambúrguer é reaproveitado no hero,
-     nos cards do cardápio e na seção de impacto, para reforçar a continuidade visual. -->
-<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bunGradient" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#FBD988"/>
-      <stop offset="55%" stop-color="#E8A33D"/>
-      <stop offset="100%" stop-color="#B9722A"/>
-    </linearGradient>
-    <linearGradient id="bottomBunGradient" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#F0C079"/>
-      <stop offset="100%" stop-color="#C9812E"/>
-    </linearGradient>
-    <linearGradient id="pattyGradient" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#6B4226"/>
-      <stop offset="100%" stop-color="#3B2415"/>
-    </linearGradient>
-    <linearGradient id="cheeseGradient" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#FFD766"/>
-      <stop offset="100%" stop-color="#FFB020"/>
-    </linearGradient>
-    <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="10"/>
-    </filter>
-  </defs>
-
-  <symbol id="burger-art" viewBox="0 0 600 500">
-    <ellipse class="burger-shadow" cx="300" cy="462" rx="195" ry="20" fill="rgba(10,6,4,0.4)" filter="url(#softBlur)"/>
-    <path class="burger-bun-bottom" fill="url(#bottomBunGradient)" d="M112,440 C112,460 155,472 300,472 C445,472 488,460 488,440 L480,388 C480,376 470,368 458,368 L142,368 C130,368 120,376 120,388 Z"/>
-    <path class="burger-lettuce" fill="#7CB342" d="M95,380 Q135,355 175,378 Q215,353 255,378 Q295,353 335,378 Q375,353 415,378 Q455,353 505,380 L505,405 Q455,392 415,404 Q375,390 335,404 Q295,390 255,404 Q215,390 175,404 Q135,392 95,405 Z"/>
-    <g class="burger-patty">
-      <rect x="128" y="328" width="344" height="58" rx="27" fill="url(#pattyGradient)"/>
-      <path d="M175,345 L205,368" stroke="#2A160C" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
-      <path d="M245,342 L275,372" stroke="#2A160C" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
-      <path d="M325,344 L355,370" stroke="#2A160C" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
-      <path d="M395,342 L425,372" stroke="#2A160C" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
-    </g>
-    <path class="burger-cheese" fill="url(#cheeseGradient)" d="M108,300 L492,300 L492,326 L468,340 L444,324 L420,342 L396,324 L372,340 L348,322 L324,340 L300,323 L276,340 L252,322 L228,340 L204,324 L180,342 L156,324 L132,340 L108,326 Z"/>
-    <g class="burger-tomato">
-      <ellipse cx="168" cy="304" rx="34" ry="13" fill="#E63946"/>
-      <ellipse cx="160" cy="303" rx="4" ry="2.4" fill="#FFD3D3"/>
-      <ellipse cx="176" cy="307" rx="4" ry="2.4" fill="#FFD3D3"/>
-      <ellipse cx="432" cy="302" rx="30" ry="12" fill="#E63946"/>
-      <ellipse cx="424" cy="301" rx="3.6" ry="2.2" fill="#FFD3D3"/>
-      <ellipse cx="440" cy="304" rx="3.6" ry="2.2" fill="#FFD3D3"/>
-    </g>
-    <path class="burger-bun-top" fill="url(#bunGradient)" d="M98,300 C98,175 170,110 300,110 C430,110 502,175 502,300 Z"/>
-    <g class="burger-seeds" fill="#FFF3D6">
-      <ellipse cx="230" cy="190" rx="6" ry="3" transform="rotate(-20 230 190)"/>
-      <ellipse cx="270" cy="160" rx="6" ry="3" transform="rotate(10 270 160)"/>
-      <ellipse cx="320" cy="150" rx="6" ry="3" transform="rotate(-8 320 150)"/>
-      <ellipse cx="365" cy="168" rx="6" ry="3" transform="rotate(18 365 168)"/>
-      <ellipse cx="200" cy="230" rx="6" ry="3" transform="rotate(-15 200 230)"/>
-      <ellipse cx="395" cy="220" rx="6" ry="3" transform="rotate(12 395 220)"/>
-      <ellipse cx="255" cy="215" rx="6" ry="3" transform="rotate(4 255 215)"/>
-      <ellipse cx="340" cy="205" rx="6" ry="3" transform="rotate(-12 340 205)"/>
-      <ellipse cx="300" cy="235" rx="6" ry="3" transform="rotate(6 300 235)"/>
-    </g>
-  </symbol>
-</svg>
-
 <a class="skip-link" href="#hero-heading">Ir para o conteúdo</a>
 
 <header class="navbar" id="navbar">
-  <div class="navbar__inner">
-    <a href="#hero" class="navbar__logo">BRASA<span>°</span></a>
-    <nav class="navbar__links" aria-label="Navegação principal">
+  <nav class="navbar__inner shell" aria-label="Navegação principal">
+    <a href="#hero" class="logo">BRASA<span>°</span></a>
+    <div class="navbar__links">
       <a href="#produtos">Cardápio</a>
       <a href="#impacto">Sobre</a>
       <a href="#cta">Contato</a>
-    </nav>
-    <a href="#cta" class="navbar__cta btn btn--sm">Pedir agora</a>
-  </div>
+    </div>
+    <a href="#cta" class="button button--sm">Pedir agora <span aria-hidden="true">↗</span></a>
+  </nav>
 </header>
 
 <main id="top">
 
   <!-- ===================== HERO ===================== -->
   <section class="hero" id="hero">
-    <div class="hero__bg" aria-hidden="true"></div>
+    <div class="hero__photo" style="background-image:url('https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?auto=format&amp;fit=crop&amp;w=2200&amp;q=92')" role="img" aria-label="Hambúrguer artesanal sobre tábua de madeira, com molho e batatas ao fundo"></div>
+    <div class="hero__shade"></div>
 
-    <div class="hero__content">
-      <p class="hero__eyebrow">Grelhado na brasa · Feito na hora</p>
+    <div class="hero__content shell">
+      <p class="eyebrow hero__eyebrow"><span></span> Hambúrguer artesanal · feito na brasa</p>
       <h1 class="hero__title" id="hero-heading">
-        <span class="line"><span class="line-inner">FOME DE</span></span>
-        <span class="line"><span class="line-inner">ALGO ÉPICO?</span></span>
+        <span class="hero__title-row">Fome de</span>
+        <span class="hero__title-row"><em>algo épico?</em></span>
       </h1>
       <p class="hero__subtitle">
-        Blend 100% artesanal, pão brioche tostado na chapa e ingredientes
-        selecionados — montado na hora, do jeito que hambúrguer bom tem que ser.
+        Blend artesanal, pão brioche tostado e ingredientes selecionados.
+        O tipo de sabor que faz você esquecer o resto.
       </p>
       <div class="hero__actions">
-        <a href="#cta" class="btn">Pedir agora</a>
-        <a href="#produtos" class="link-arrow">Ver cardápio ↓</a>
+        <a href="#cta" class="button">Pedir agora <span aria-hidden="true">↗</span></a>
+        <a href="#produtos" class="text-link">Ver cardápio <span aria-hidden="true">↓</span></a>
       </div>
     </div>
 
-    <div class="hero__scroll-cue" aria-hidden="true">
-      <span></span> role scroll
+    <div class="hero__note" aria-hidden="true">
+      <strong>01</strong>
+      <span>Feito na brasa<br>com tempo e intenção.</span>
+    </div>
+
+    <div class="hero__bottom shell">
+      <span>São Paulo · Brasil</span>
+      <span>Role para explorar <b aria-hidden="true">↓</b></span>
     </div>
   </section>
 
-  <!-- Elemento único do hambúrguer: fica fixo na tela e viaja/transiciona
-       do hero até o início do cardápio, controlado pelo scroll. -->
-  <div class="hero-burger" id="heroBurger" aria-hidden="true">
-    <svg viewBox="0 0 600 500"><use href="#burger-art"></use></svg>
-  </div>
-
   <!-- ===================== PRODUTOS ===================== -->
-  <section class="products" id="produtos">
-    <div class="products__head">
-      <p class="section-tag">O cardápio</p>
-      <h2 class="section-title">Clássicos da casa</h2>
+  <section class="menu shell" id="produtos">
+    <div class="menu__heading">
+      <div>
+        <p class="eyebrow eyebrow--dark"><span></span> O cardápio</p>
+        <h2>Escolha seu<br><em>momento.</em></h2>
+      </div>
+      <p class="menu__intro">Quatro combinações pensadas para<br class="only-desktop"> quem leva sabor a sério.</p>
     </div>
 
-    <div class="products__grid">
+    <div class="menu__grid">
 
-      <article class="product-card">
-        <span class="product-card__badge">Mais pedido</span>
-        <div class="product-card__image">
-          <svg viewBox="0 0 600 500"><use href="#burger-art"></use></svg>
+      <article class="menu-card">
+        <div class="menu-card__image-wrap">
+          <img class="menu-card__image" src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1200&q=88" alt="Clássico da Brasa, hambúrguer artesanal">
+          <span class="badge">Mais pedido</span>
+          <span class="card-index">01</span>
         </div>
-        <h3 class="product-card__name">Clássico da Brasa</h3>
-        <p class="product-card__desc">Blend 180g, queijo cheddar, alface, tomate e maionese da casa.</p>
-        <p class="product-card__price">R$ 28,90</p>
+        <div class="menu-card__copy">
+          <div class="menu-card__text">
+            <h3>Clássico da Brasa</h3>
+            <p>Blend 180g, cheddar, alface, tomate, maionese da casa.</p>
+          </div>
+          <div class="menu-card__meta">
+            <strong>R$ 28,90</strong>
+            <a href="#cta" aria-label="Pedir Clássico da Brasa"><span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
       </article>
 
-      <article class="product-card">
-        <span class="product-card__badge">Favorito</span>
-        <div class="product-card__image">
-          <svg viewBox="0 0 600 500"><use href="#burger-art"></use></svg>
+      <article class="menu-card">
+        <div class="menu-card__image-wrap">
+          <img class="menu-card__image" src="https://images.unsplash.com/photo-1553979459-d2229ba7433b?auto=format&fit=crop&w=1200&q=88" alt="Bacon Explosion, hambúrguer artesanal">
+          <span class="badge">Favorito</span>
+          <span class="card-index">02</span>
         </div>
-        <h3 class="product-card__name">Bacon Explosion</h3>
-        <p class="product-card__desc">Duplo blend, bacon crocante, cheddar derretido e cebola caramelizada.</p>
-        <p class="product-card__price">R$ 34,90</p>
+        <div class="menu-card__copy">
+          <div class="menu-card__text">
+            <h3>Bacon Explosion</h3>
+            <p>Duplo blend, bacon crocante, cheddar derretido, cebola caramelizada.</p>
+          </div>
+          <div class="menu-card__meta">
+            <strong>R$ 34,90</strong>
+            <a href="#cta" aria-label="Pedir Bacon Explosion"><span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
       </article>
 
-      <article class="product-card">
-        <span class="product-card__badge">Vegetariano</span>
-        <div class="product-card__image">
-          <svg viewBox="0 0 600 500"><use href="#burger-art"></use></svg>
+      <article class="menu-card">
+        <div class="menu-card__image-wrap">
+          <img class="menu-card__image" src="https://images.unsplash.com/photo-1520072959219-c595dc870360?auto=format&fit=crop&w=1200&q=88" alt="Veggie Verde, hambúrguer artesanal">
+          <span class="badge">Vegetariano</span>
+          <span class="card-index">03</span>
         </div>
-        <h3 class="product-card__name">Veggie Verde</h3>
-        <p class="product-card__desc">Blend de grão-de-bico e cogumelos, rúcula, tomate seco e maionese vegana.</p>
-        <p class="product-card__price">R$ 27,90</p>
+        <div class="menu-card__copy">
+          <div class="menu-card__text">
+            <h3>Veggie Verde</h3>
+            <p>Blend de grão-de-bico e cogumelos, rúcula, tomate seco, maionese vegana.</p>
+          </div>
+          <div class="menu-card__meta">
+            <strong>R$ 27,90</strong>
+            <a href="#cta" aria-label="Pedir Veggie Verde"><span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
       </article>
 
-      <article class="product-card">
-        <span class="product-card__badge">Novidade</span>
-        <div class="product-card__image">
-          <svg viewBox="0 0 600 500"><use href="#burger-art"></use></svg>
+      <article class="menu-card">
+        <div class="menu-card__image-wrap">
+          <img class="menu-card__image" src="https://images.unsplash.com/photo-1606755962773-d324e0a13086?auto=format&fit=crop&w=1200&q=88" alt="Frango Crispy, hambúrguer artesanal">
+          <span class="badge">Novidade</span>
+          <span class="card-index">04</span>
         </div>
-        <h3 class="product-card__name">Frango Crispy</h3>
-        <p class="product-card__desc">Frango empanado crocante, coleslaw, picles e maionese picante.</p>
-        <p class="product-card__price">R$ 29,90</p>
+        <div class="menu-card__copy">
+          <div class="menu-card__text">
+            <h3>Frango Crispy</h3>
+            <p>Frango empanado crocante, coleslaw, picles, maionese picante.</p>
+          </div>
+          <div class="menu-card__meta">
+            <strong>R$ 29,90</strong>
+            <a href="#cta" aria-label="Pedir Frango Crispy"><span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
       </article>
 
     </div>
@@ -177,35 +152,35 @@
 
   <!-- ===================== IMPACTO ===================== -->
   <section class="impact" id="impacto">
-    <div class="impact__media" aria-hidden="true">
-      <svg viewBox="0 0 600 500"><use href="#burger-art"></use></svg>
-    </div>
-    <div class="impact__scrim"></div>
-    <div class="impact__content">
+    <div class="impact__photo" style="background-image:url('https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&amp;fit=crop&amp;w=2200&amp;q=92')" role="img" aria-label="Close de hambúrguer suculento com queijo derretido e fumaça"></div>
+    <div class="impact__overlay"></div>
+
+    <div class="impact__content shell">
+      <p class="eyebrow"><span></span> O nosso jeito</p>
       <h2 class="impact__title">
-        <span class="impact__title-row">CARNE NO PONTO.</span>
-        <span class="impact__title-row">SABOR NO LIMITE.</span>
+        <span class="impact__title-row">Carne no ponto.</span>
+        <span class="impact__title-row"><em>Sabor no limite.</em></span>
       </h2>
-      <p class="impact__subtitle">
-        Grelhado na brasa, montado na hora, entregue com o mesmo cuidado
-        de quem cozinha para você.
-      </p>
+      <p class="impact__subtitle">Sem atalhos, sem pressa. Só fogo alto, bons ingredientes e aquela mordida que faz silêncio na mesa.</p>
     </div>
+
+    <div class="impact__stamp" aria-hidden="true">BRASA<br><span>°</span><br>BURGER</div>
   </section>
 
   <!-- ===================== CTA FINAL ===================== -->
-  <section class="cta" id="cta">
-    <div class="cta__content">
-      <h2 class="cta__title">Pronto para sentir essa fome?</h2>
-      <p class="cta__subtitle">Peça agora e receba seu hambúrguer fresquinho em minutos.</p>
-      <a href="#top" class="btn btn--pulse">Pedir agora</a>
-    </div>
+  <section class="cta shell" id="cta">
+    <p class="eyebrow eyebrow--dark cta__eyebrow"><span></span> A mesa está posta</p>
+    <h2 class="cta__title">Pronto para sentir<br>essa <em>fome?</em></h2>
+    <a href="#top" class="button button--pulse">Pedir agora <span aria-hidden="true">↗</span></a>
+    <p class="cta__note">Peça agora e receba seu hambúrguer fresquinho em minutos.</p>
   </section>
 
 </main>
 
-<footer class="footer">
-  <p>© 2026 Brasa° Burger — projeto de referência de animação (não é um estabelecimento real).</p>
+<footer class="footer shell">
+  <a href="#top" class="logo logo--dark">BRASA<span>°</span></a>
+  <p>Fogo. Fome. Felicidade.</p>
+  <span>© 2026 Brasa° Burger — projeto de referência de animação (não é um estabelecimento real).</span>
 </footer>
 
 <script src="js/vendor/gsap.min.js"></script>
