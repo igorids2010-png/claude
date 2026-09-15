@@ -3,12 +3,39 @@ const button = document.getElementById('search-button');
 const statusEl = document.getElementById('status');
 const summaryEl = document.getElementById('summary');
 const resultsEl = document.getElementById('results');
-const localInput = document.getElementById('local');
+
+const ramoInput = document.getElementById('ramo');
+const nichoChips = document.querySelectorAll('#nicho-chips .chip');
+const estadoSelect = document.getElementById('estado');
+const cidadeInput = document.getElementById('cidade');
+
 const geoButton = document.getElementById('geo-button');
+const geoPanel = document.getElementById('geo-panel');
 const raioSelect = document.getElementById('raio');
 const geoStatusEl = document.getElementById('geo-status');
 
 let coordsAtuais = null;
+
+/* ---------- nicho ---------- */
+
+function marcarChipAtivo() {
+  const valorAtual = ramoInput.value.trim().toLowerCase();
+  nichoChips.forEach((chip) => {
+    chip.classList.toggle('active', chip.dataset.nicho.toLowerCase() === valorAtual);
+  });
+}
+
+nichoChips.forEach((chip) => {
+  chip.addEventListener('click', () => {
+    ramoInput.value = chip.dataset.nicho;
+    marcarChipAtivo();
+    ramoInput.focus();
+  });
+});
+
+ramoInput.addEventListener('input', marcarChipAtivo);
+
+/* ---------- geolocalização ---------- */
 
 function showGeoStatus(message, isError = false) {
   geoStatusEl.hidden = false;
@@ -23,20 +50,21 @@ function clearGeoStatus() {
 
 function ativarLocalizacaoAtual(coords) {
   coordsAtuais = coords;
-  localInput.value = '';
-  localInput.disabled = true;
-  localInput.placeholder = 'Usando sua localização atual';
-  raioSelect.hidden = false;
+  estadoSelect.disabled = true;
+  cidadeInput.disabled = true;
+  cidadeInput.placeholder = 'Usando sua localização atual';
+  geoPanel.hidden = false;
   geoButton.textContent = '✕ Remover localização atual';
   geoButton.classList.add('active');
-  showGeoStatus('📍 Localização atual ativada — a busca vai usar o raio selecionado ao lado.');
+  showGeoStatus('📍 Localização atual ativada — a busca vai usar o raio selecionado acima.');
 }
 
 function desativarLocalizacaoAtual() {
   coordsAtuais = null;
-  localInput.disabled = false;
-  localInput.placeholder = 'ex: São Paulo, SP';
-  raioSelect.hidden = true;
+  estadoSelect.disabled = false;
+  cidadeInput.disabled = false;
+  cidadeInput.placeholder = 'ex: Curitiba';
+  geoPanel.hidden = true;
   geoButton.textContent = '📍 Usar minha localização atual';
   geoButton.classList.remove('active');
   clearGeoStatus();
@@ -49,7 +77,7 @@ geoButton.addEventListener('click', () => {
   }
 
   if (!('geolocation' in navigator)) {
-    showGeoStatus('Seu navegador não suporta geolocalização. Digite a localização manualmente.', true);
+    showGeoStatus('Seu navegador não suporta geolocalização. Escolha estado e cidade manualmente.', true);
     return;
   }
 
@@ -67,7 +95,7 @@ geoButton.addEventListener('click', () => {
     (err) => {
       geoButton.disabled = false;
       const mensagens = {
-        1: 'Permissão de localização negada. Permita o acesso ou digite a localização manualmente.',
+        1: 'Permissão de localização negada. Permita o acesso ou escolha estado e cidade manualmente.',
         2: 'Não foi possível determinar sua localização agora.',
         3: 'Tempo esgotado ao tentar obter sua localização.',
       };
@@ -77,6 +105,8 @@ geoButton.addEventListener('click', () => {
   );
 });
 
+/* ---------- busca ---------- */
+
 function setLoading(isLoading) {
   button.disabled = isLoading;
   button.querySelector('.btn-label').textContent = isLoading ? 'Buscando...' : 'Buscar';
@@ -85,7 +115,8 @@ function setLoading(isLoading) {
 function showStatus(message, isError = false) {
   statusEl.hidden = false;
   statusEl.classList.toggle('error', isError);
-  statusEl.innerHTML = isError ? message : `<span class="spinner"></span>${message}`;
+  const marcador = isError ? '<span class="bullet">▸</span>' : '<span class="spinner"></span>';
+  statusEl.innerHTML = `${marcador}${message}`;
 }
 
 function clearStatus() {
@@ -95,39 +126,44 @@ function clearStatus() {
 
 function renderSummary(query, total, encontrados) {
   summaryEl.hidden = false;
-  summaryEl.textContent = `Busca por "${query}": ${total} lugares analisados, ${encontrados} sem site cadastrado.`;
+  summaryEl.innerHTML = `<span class="bullet">▸</span>Busca por <b>"${escapeHtml(query)}"</b>: ${total} lugares analisados, <span class="found">${encontrados} sem site</span> cadastrado.`;
 }
 
 function renderResults(lugares) {
   resultsEl.innerHTML = '';
 
   if (lugares.length === 0) {
-    resultsEl.innerHTML = '<div class="empty-state">Nenhum lugar sem site foi encontrado para essa busca.</div>';
+    resultsEl.innerHTML =
+      '<div class="empty-state">Nenhum lugar sem site foi encontrado para essa busca. Tente outro nicho, outra cidade ou aumente o raio.</div>';
     return;
   }
 
-  for (const lugar of lugares) {
+  lugares.forEach((lugar, index) => {
     const card = document.createElement('div');
     card.className = 'place-card';
+    card.style.animationDelay = `${index * 40}ms`;
 
     const avaliacao =
       lugar.avaliacao != null
-        ? `<span class="place-rating">★ ${lugar.avaliacao}</span> (${lugar.totalAvaliacoes ?? 0} avaliações)`
+        ? `<span class="place-rating">★ ${lugar.avaliacao}</span> · ${lugar.totalAvaliacoes ?? 0} avaliações`
         : 'Sem avaliações';
 
     card.innerHTML = `
+      <div class="pin">${index + 1}</div>
       <div class="place-info">
         <h3>${escapeHtml(lugar.nome)}</h3>
-        <p>${escapeHtml(lugar.endereco)}</p>
-        <p>${lugar.telefone ? escapeHtml(lugar.telefone) : 'Telefone não informado'}</p>
-        <p>${avaliacao}</p>
-        <span class="no-site-badge">SEM SITE</span>
+        <p class="addr">${escapeHtml(lugar.endereco)}</p>
+        <div class="meta">
+          ${avaliacao}
+          <span>${lugar.telefone ? escapeHtml(lugar.telefone) : 'Telefone não informado'}</span>
+          <span class="no-site-badge">SEM SITE</span>
+        </div>
       </div>
-      ${lugar.linkMaps ? `<a class="maps-link" href="${lugar.linkMaps}" target="_blank" rel="noopener">Ver no Maps</a>` : ''}
+      ${lugar.linkMaps ? `<a class="maps-link" href="${lugar.linkMaps}" target="_blank" rel="noopener">Ver no Maps ↗</a>` : ''}
     `;
 
     resultsEl.appendChild(card);
-  }
+  });
 }
 
 function escapeHtml(str) {
@@ -136,20 +172,25 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function montarLocal() {
+  const cidade = cidadeInput.value.trim();
+  const estadoOption = estadoSelect.options[estadoSelect.selectedIndex];
+  const estadoNome = estadoSelect.value ? estadoOption.textContent : '';
+
+  if (cidade && estadoNome) return `${cidade}, ${estadoNome}`;
+  return cidade || estadoNome;
+}
+
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  const ramo = document.getElementById('ramo').value.trim();
-  const local = localInput.value.trim();
-
+  const ramo = ramoInput.value.trim();
   if (!ramo) return;
 
   resultsEl.innerHTML = '';
   summaryEl.hidden = true;
   setLoading(true);
-  showStatus(
-    coordsAtuais ? 'Buscando lugares perto de você no Google Maps...' : 'Buscando lugares no Google Maps...'
-  );
+  showStatus(coordsAtuais ? 'Buscando lugares perto de você no Google Maps...' : 'Buscando lugares no Google Maps...');
 
   try {
     const params = new URLSearchParams({ ramo });
@@ -159,6 +200,8 @@ form.addEventListener('submit', async (event) => {
       params.set('lng', coordsAtuais.lng);
       params.set('raio', raioSelect.value);
     } else {
+      const local = montarLocal();
+      if (!local) throw new Error('Escolha um estado/cidade ou use sua localização atual.');
       params.set('local', local);
     }
 

@@ -1,15 +1,16 @@
-# Sem Site Bot
+# Radar Sem Site
 
-Bot com visual moderno e simples que busca no Google Maps lugares de um determinado ramo (ex: "dentistas em Curitiba") e mostra apenas os que **não possuem site cadastrado** — ótimo para prospecção de clientes que precisam de um site.
+Bot com visual moderno (tema escuro estilo console de radar) que varre o Google Maps por **nicho** e **cidade** e mostra apenas os estabelecimentos que **não possuem site cadastrado** — ótimo para prospecção de clientes que precisam de um site.
 
 ## Como funciona
 
-1. Você digita o **ramo** (ex: "restaurantes", "salões de beleza") e escolhe como localizar:
-   - clicando em **"Usar minha localização atual"** (o navegador pede permissão de geolocalização e você escolhe o raio de busca: 1 a 20 km); ou
-   - digitando uma **localização** manualmente (ex: "Belo Horizonte, MG").
-2. O servidor consulta a Google Places API — **Nearby Search** quando é usada a localização atual, ou **Text Search** quando é digitado um lugar.
-3. Para cada lugar encontrado, ele busca os detalhes na mesma API e verifica o campo `website`.
-4. Só são exibidos os lugares **sem site**, com nome, endereço, telefone, avaliação e link para o Google Maps.
+1. Você escolhe o **nicho** — digitando livremente (ex: "lanchonetes", "clínicas odontológicas") ou clicando em um dos atalhos prontos (lanchonetes, restaurantes, clínicas odontológicas, bares, mercados, salões de beleza, petshops, academias, padarias, farmácias, oficinas mecânicas, comércio local).
+2. Você escolhe onde buscar:
+   - selecionando **Estado** + **Cidade**; ou
+   - clicando em **"Usar minha localização atual"** (o navegador pede permissão de geolocalização e você escolhe o raio de busca: 1 a 20 km).
+3. O servidor consulta a Google Places API — **Nearby Search** quando é usada a localização atual, ou **Text Search** quando é escolhido estado/cidade.
+4. Para cada lugar encontrado, ele busca os detalhes na mesma API e verifica o campo `website`.
+5. Só são exibidos os lugares **sem site**, com nome, endereço, telefone, avaliação e link para o Google Maps.
 
 O Google Maps (Places API) é a única fonte de dados: é ele quem decide se um estabelecimento existe, onde fica e se tem site cadastrado.
 

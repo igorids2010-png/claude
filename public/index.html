@@ -3,48 +3,129 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sem Site Bot — Encontre clientes em potencial</title>
+  <title>Radar Sem Site — encontre negócios sem site no Google Maps</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="page">
-    <header class="hero">
-      <div class="hero-icon">📍</div>
-      <h1>Sem Site Bot</h1>
-      <p>Encontre negócios no Google Maps que ainda não têm site.</p>
-    </header>
+  <div class="wrap">
 
-    <form id="search-form" class="search-card">
-      <div class="field">
-        <label for="ramo">Ramo de negócio</label>
-        <input id="ramo" name="ramo" type="text" placeholder="ex: dentistas, restaurantes, salões de beleza" required />
+    <div class="brand">
+      <div class="brand-mark">
+        <div class="sweep"></div>
+        <div class="dot"></div>
       </div>
-      <div class="field">
-        <label for="local">Localização</label>
-        <input id="local" name="local" type="text" placeholder="ex: São Paulo, SP" />
+      <div class="brand-text">
+        <div class="eyebrow">prospecção local</div>
+        <h1>Radar Sem Site</h1>
       </div>
-      <button type="submit" id="search-button">
+    </div>
+
+    <div class="hero">
+      <h2>Encontre negócios no Google Maps que <em>ainda não têm site</em>.</h2>
+      <p>Escolha o nicho e a cidade — o radar varre o Google Maps e separa só os estabelecimentos sem site cadastrado, prontos para sua próxima prospecção.</p>
+    </div>
+
+    <form id="search-form" class="console">
+      <div class="console-head"><span class="beam"></span> console de busca</div>
+
+      <div class="field">
+        <label for="ramo">Nicho</label>
+        <div class="input-shell">
+          <span class="glyph">▸</span>
+          <input id="ramo" name="ramo" type="text" placeholder="ex: lanchonetes, clínicas odontológicas" required autocomplete="off" />
+        </div>
+        <div class="chips" id="nicho-chips">
+          <button type="button" class="chip" data-nicho="lanchonete">Lanchonetes</button>
+          <button type="button" class="chip" data-nicho="restaurante">Restaurantes</button>
+          <button type="button" class="chip" data-nicho="clínica odontológica">Clínicas odontológicas</button>
+          <button type="button" class="chip" data-nicho="bar">Bares</button>
+          <button type="button" class="chip" data-nicho="mercado">Mercados</button>
+          <button type="button" class="chip" data-nicho="salão de beleza">Salões de beleza</button>
+          <button type="button" class="chip" data-nicho="petshop">Petshops</button>
+          <button type="button" class="chip" data-nicho="academia">Academias</button>
+          <button type="button" class="chip" data-nicho="padaria">Padarias</button>
+          <button type="button" class="chip" data-nicho="farmácia">Farmácias</button>
+          <button type="button" class="chip" data-nicho="oficina mecânica">Oficinas mecânicas</button>
+          <button type="button" class="chip" data-nicho="comércio local">Comércio local</button>
+        </div>
+      </div>
+
+      <div class="location-block">
+        <div class="location-head">
+          <span class="location-title">Onde buscar</span>
+          <button type="button" id="geo-button" class="geo-btn">📍 Usar minha localização atual</button>
+        </div>
+
+        <div class="loc-fields" id="loc-fields">
+          <div class="field">
+            <label for="estado">Estado</label>
+            <div class="input-shell">
+              <span class="glyph">▸</span>
+              <select id="estado" name="estado">
+                <option value="">Selecione</option>
+                <option value="AC">Acre</option>
+                <option value="AL">Alagoas</option>
+                <option value="AP">Amapá</option>
+                <option value="AM">Amazonas</option>
+                <option value="BA">Bahia</option>
+                <option value="CE">Ceará</option>
+                <option value="DF">Distrito Federal</option>
+                <option value="ES">Espírito Santo</option>
+                <option value="GO">Goiás</option>
+                <option value="MA">Maranhão</option>
+                <option value="MT">Mato Grosso</option>
+                <option value="MS">Mato Grosso do Sul</option>
+                <option value="MG">Minas Gerais</option>
+                <option value="PA">Pará</option>
+                <option value="PB">Paraíba</option>
+                <option value="PR">Paraná</option>
+                <option value="PE">Pernambuco</option>
+                <option value="PI">Piauí</option>
+                <option value="RJ">Rio de Janeiro</option>
+                <option value="RN">Rio Grande do Norte</option>
+                <option value="RS">Rio Grande do Sul</option>
+                <option value="RO">Rondônia</option>
+                <option value="RR">Roraima</option>
+                <option value="SC">Santa Catarina</option>
+                <option value="SP">São Paulo</option>
+                <option value="SE">Sergipe</option>
+                <option value="TO">Tocantins</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="cidade">Cidade</label>
+            <div class="input-shell">
+              <span class="glyph">▸</span>
+              <input id="cidade" name="cidade" type="text" placeholder="ex: Curitiba" autocomplete="off" />
+            </div>
+          </div>
+        </div>
+
+        <div class="geo-panel" id="geo-panel" hidden>
+          <select id="raio" class="raio-select">
+            <option value="1000">Raio: 1 km</option>
+            <option value="3000">Raio: 3 km</option>
+            <option value="5000" selected>Raio: 5 km</option>
+            <option value="10000">Raio: 10 km</option>
+            <option value="20000">Raio: 20 km</option>
+          </select>
+        </div>
+
+        <div id="geo-status" class="geo-status" hidden></div>
+      </div>
+
+      <button type="submit" class="scan" id="search-button">
         <span class="btn-label">Buscar</span>
       </button>
     </form>
 
-    <div class="location-tools">
-      <button type="button" id="geo-button" class="geo-btn">📍 Usar minha localização atual</button>
-      <select id="raio" class="raio-select" hidden>
-        <option value="1000">Raio: 1 km</option>
-        <option value="3000">Raio: 3 km</option>
-        <option value="5000" selected>Raio: 5 km</option>
-        <option value="10000">Raio: 10 km</option>
-        <option value="20000">Raio: 20 km</option>
-      </select>
-      <span id="geo-status" class="geo-status" hidden></span>
-    </div>
+    <div class="ticker" id="status" hidden></div>
+    <div class="ticker summary-line" id="summary" hidden></div>
 
-    <section id="status" class="status" hidden></section>
+    <div class="results" id="results"></div>
 
-    <section id="summary" class="summary" hidden></section>
-
-    <section id="results" class="results"></section>
   </div>
 
   <script src="script.js"></script>
