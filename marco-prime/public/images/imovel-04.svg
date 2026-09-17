@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img" preserveAspectRatio="xMidYMid slice"><defs>
+    <linearGradient id="sky-43" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2f2f2f"/>
+      <stop offset="55%" stop-color="#171717"/>
+      <stop offset="100%" stop-color="#060606"/>
+    </linearGradient>
+    <radialGradient id="haze-43" cx="50%" cy="88%" r="70%">
+      <stop offset="0%" stop-color="#c9a961" stop-opacity="0.16"/>
+      <stop offset="60%" stop-color="#c9a961" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#c9a961" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="vignette-43" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a" stop-opacity="0.4"/>
+      <stop offset="45%" stop-color="#0a0a0a" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0.75"/>
+    </linearGradient>
+    <pattern id="g-43" width="46" height="58" patternUnits="userSpaceOnUse">
+      <rect width="46" height="58" fill="none"/>
+      <rect x="0" y="0" width="1" height="58" fill="#f4f2ee" opacity="0.07"/>
+      <rect x="0" y="0" width="46" height="1" fill="#f4f2ee" opacity="0.045"/>
+    </pattern><linearGradient id="face-43" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#171717"/>
+      <stop offset="40%" stop-color="#3c3c3c"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+  </defs><rect width="1200" height="900" fill="url(#sky-43)"/><rect width="1200" height="900" fill="url(#haze-43)"/><rect x="216" y="63.3" width="768" height="836.7" fill="url(#face-43)"/><rect x="216" y="63.3" width="768" height="836.7" fill="url(#g-43)"/><rect x="217" y="238.3" width="766" height="56" fill="#e8dcc0" opacity="0.1"/><rect x="217" y="296.3" width="766" height="56" fill="#e8dcc0" opacity="0.1"/><rect x="217" y="702.3" width="766" height="56" fill="#e8dcc0" opacity="0.1"/><rect x="217" y="121.3" width="44" height="749.7" fill="#e8dcc0" opacity="0.1"/><rect x="217" y="121.3" width="44" height="749.7" fill="#e8dcc0" opacity="0.1"/><rect x="631" y="180.3" width="136" height="56" fill="#e8dcc0" opacity="0.4"/><rect x="401" y="470.3" width="136" height="56" fill="#e8dcc0" opacity="0.3"/><rect x="355" y="644.3" width="136" height="56" fill="#e8dcc0" opacity="0.3"/><rect x="217" y="296.3" width="44" height="56" fill="#e8dcc0" opacity="0.4"/><rect x="401" y="528.3" width="136" height="56" fill="#e8dcc0" opacity="0.4"/><rect x="769" y="586.3" width="90" height="56" fill="#e8dcc0" opacity="0.2"/><rect x="539" y="296.3" width="90" height="56" fill="#e8dcc0" opacity="0.4"/><rect x="723" y="760.3" width="90" height="56" fill="#e8dcc0" opacity="0.4"/><rect x="217" y="644.3" width="44" height="56" fill="#e8dcc0" opacity="0.3"/><rect x="263" y="296.3" width="136" height="56" fill="#e8dcc0" opacity="0.3"/><rect x="263" y="122.3" width="44" height="56" fill="#e8dcc0" opacity="0.2"/><rect x="861" y="296.3" width="90" height="56" fill="#e8dcc0" opacity="0.3"/><rect x="907" y="238.3" width="44" height="56" fill="#e8dcc0" opacity="0.2"/><rect x="493" y="122.3" width="90" height="56" fill="#e8dcc0" opacity="0.3"/><rect x="216" y="63.3" width="768" height="3" fill="#c9a961" opacity="0.45"/><rect x="216" y="63.3" width="2" height="836.7" fill="#f4f2ee" opacity="0.1"/><rect x="981" y="63.3" width="3" height="836.7" fill="#000" opacity="0.45"/><rect x="477.1" y="63.3" width="1.5" height="836.7" fill="#c9a961" opacity="0.12"/><rect x="730.6" y="63.3" width="1.5" height="836.7" fill="#c9a961" opacity="0.12"/><rect width="1200" height="900" fill="url(#vignette-43)"/></svg>

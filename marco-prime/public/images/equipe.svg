@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1050" width="1400" height="1050" role="img" preserveAspectRatio="xMidYMid slice"><defs>
+    <linearGradient id="sky-83" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#202020"/>
+      <stop offset="55%" stop-color="#101010"/>
+      <stop offset="100%" stop-color="#060606"/>
+    </linearGradient>
+    <radialGradient id="haze-83" cx="50%" cy="88%" r="70%">
+      <stop offset="0%" stop-color="#c9a961" stop-opacity="0.16"/>
+      <stop offset="60%" stop-color="#c9a961" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#c9a961" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="vignette-83" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a" stop-opacity="0.4"/>
+      <stop offset="45%" stop-color="#0a0a0a" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0.75"/>
+    </linearGradient>
+    <linearGradient id="light-83" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8dcc0" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#e8dcc0" stop-opacity="0.1"/>
+    </linearGradient>
+  </defs><rect width="1400" height="1050" fill="url(#sky-83)"/><rect x="0" y="0" width="1400" height="63" fill="#0b0b0b"/><rect x="0" y="63" width="1400" height="1.5" fill="#c9a961" opacity="0.2"/><rect x="5" y="63" width="340" height="861" fill="url(#light-83)"/><rect x="0" y="63" width="5" height="861" fill="#040404"/><rect x="355" y="63" width="340" height="861" fill="url(#light-83)"/><rect x="350" y="63" width="5" height="861" fill="#040404"/><rect x="705" y="63" width="340" height="861" fill="url(#light-83)"/><rect x="700" y="63" width="5" height="861" fill="#040404"/><rect x="1055" y="63" width="340" height="861" fill="url(#light-83)"/><rect x="1050" y="63" width="5" height="861" fill="#040404"/><rect x="0" y="560.6" width="81.8" height="363.4" fill="#070707" opacity="0.85"/><rect x="98.6" y="577.8" width="108.5" height="346.2" fill="#070707" opacity="0.85"/><rect x="223.9" y="592.9" width="112.1" height="331.1" fill="#070707" opacity="0.85"/><rect x="352.8" y="593.2" width="71.4" height="330.8" fill="#070707" opacity="0.85"/><rect x="440.9" y="678.6" width="114.2" height="245.4" fill="#070707" opacity="0.85"/><rect x="571.9" y="620" width="94.9" height="304" fill="#070707" opacity="0.85"/><rect x="683.6" y="540.2" width="111.5" height="383.8" fill="#070707" opacity="0.85"/><rect x="812" y="717.2" width="130.1" height="206.8" fill="#070707" opacity="0.85"/><rect x="958.8" y="620.9" width="92.4" height="303.1" fill="#070707" opacity="0.85"/><rect x="1068" y="705.1" width="74.7" height="218.9" fill="#070707" opacity="0.85"/><rect x="1159.4" y="702.8" width="125" height="221.2" fill="#070707" opacity="0.85"/><rect x="1301.2" y="717.6" width="65.1" height="206.4" fill="#070707" opacity="0.85"/><rect x="1383.1" y="527.3" width="115.9" height="396.7" fill="#070707" opacity="0.85"/><circle cx="280" cy="470.2" r="29.4" fill="#030303"/><path d="M 231 924 L 239.2 525 Q 280 496.7 320.8 525 L 329 924 Z" fill="#030303"/><circle cx="462" cy="502" r="27.3" fill="#030303"/><path d="M 416.4 924 L 424 552.9 Q 462 526.6 500 552.9 L 507.6 924 Z" fill="#030303"/><circle cx="658" cy="470.2" r="29.4" fill="#030303"/><path d="M 609 924 L 617.2 525 Q 658 496.7 698.8 525 L 707 924 Z" fill="#030303"/><circle cx="854" cy="502" r="27.3" fill="#030303"/><path d="M 808.4 924 L 816 552.9 Q 854 526.6 892 552.9 L 899.6 924 Z" fill="#030303"/><circle cx="1064" cy="470.2" r="29.4" fill="#030303"/><path d="M 1015 924 L 1023.2 525 Q 1064 496.7 1104.8 525 L 1113 924 Z" fill="#030303"/><rect x="0" y="924" width="1400" height="126" fill="#070707"/><rect x="0" y="924" width="1400" height="1.5" fill="#c9a961" opacity="0.32"/><rect width="1400" height="1050" fill="url(#vignette-83)" opacity="0.5"/></svg>

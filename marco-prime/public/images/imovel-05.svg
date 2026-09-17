@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img" preserveAspectRatio="xMidYMid slice"><defs>
+    <linearGradient id="sky-59" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1d1d1d"/>
+      <stop offset="55%" stop-color="#0e0e0e"/>
+      <stop offset="100%" stop-color="#060606"/>
+    </linearGradient>
+    <radialGradient id="haze-59" cx="50%" cy="88%" r="70%">
+      <stop offset="0%" stop-color="#c9a961" stop-opacity="0.16"/>
+      <stop offset="60%" stop-color="#c9a961" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#c9a961" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="vignette-59" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a" stop-opacity="0.4"/>
+      <stop offset="45%" stop-color="#0a0a0a" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0.75"/>
+    </linearGradient>
+    <linearGradient id="light-59" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8dcc0" stop-opacity="0.34"/>
+      <stop offset="100%" stop-color="#e8dcc0" stop-opacity="0.12"/>
+    </linearGradient>
+    <linearGradient id="reflect-59" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c9a961" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#c9a961" stop-opacity="0"/>
+    </linearGradient>
+  </defs><rect width="1200" height="900" fill="url(#sky-59)"/><rect x="0" y="0" width="1200" height="126" fill="#151515"/><rect x="0" y="124" width="1200" height="2" fill="#c9a961" opacity="0.22"/><rect x="4" y="126" width="163.4" height="522" fill="url(#light-59)"/><rect x="0" y="126" width="4" height="522" fill="#050505"/><rect x="175.4" y="126" width="163.4" height="522" fill="url(#light-59)"/><rect x="171.4" y="126" width="4" height="522" fill="#050505"/><rect x="346.9" y="126" width="163.4" height="522" fill="url(#light-59)"/><rect x="342.9" y="126" width="4" height="522" fill="#050505"/><rect x="518.3" y="126" width="163.4" height="522" fill="url(#light-59)"/><rect x="514.3" y="126" width="4" height="522" fill="#050505"/><rect x="689.7" y="126" width="163.4" height="522" fill="url(#light-59)"/><rect x="685.7" y="126" width="4" height="522" fill="#050505"/><rect x="861.1" y="126" width="163.4" height="522" fill="url(#light-59)"/><rect x="857.1" y="126" width="4" height="522" fill="#050505"/><rect x="1032.6" y="126" width="163.4" height="522" fill="url(#light-59)"/><rect x="1028.6" y="126" width="4" height="522" fill="#050505"/><rect x="0" y="378.8" width="78.7" height="269.2" fill="#0c0c0c" opacity="0.85"/><rect x="95.5" y="367.7" width="79.5" height="280.3" fill="#0c0c0c" opacity="0.85"/><rect x="191.9" y="364.6" width="110.8" height="283.4" fill="#0c0c0c" opacity="0.85"/><rect x="319.4" y="462.9" width="64.9" height="185.1" fill="#0c0c0c" opacity="0.85"/><rect x="401.1" y="517.4" width="63.5" height="130.6" fill="#0c0c0c" opacity="0.85"/><rect x="481.4" y="507.8" width="126.8" height="140.2" fill="#0c0c0c" opacity="0.85"/><rect x="625" y="379.6" width="72.9" height="268.4" fill="#0c0c0c" opacity="0.85"/><rect x="714.7" y="468.2" width="71.7" height="179.8" fill="#0c0c0c" opacity="0.85"/><rect x="803.2" y="497.2" width="74.6" height="150.8" fill="#0c0c0c" opacity="0.85"/><rect x="894.7" y="429.4" width="124.5" height="218.6" fill="#0c0c0c" opacity="0.85"/><rect x="1036" y="463.7" width="86.8" height="184.3" fill="#0c0c0c" opacity="0.85"/><rect x="1139.6" y="417" width="128.7" height="231" fill="#0c0c0c" opacity="0.85"/><rect x="0" y="644" width="1200" height="4" fill="#c9a961" opacity="0.32"/><rect x="168" y="0" width="60" height="648" fill="#0b0b0b"/><rect x="168" y="0" width="1.5" height="648" fill="#c9a961" opacity="0.22"/><rect x="816" y="0" width="60" height="648" fill="#0b0b0b"/><rect x="816" y="0" width="1.5" height="648" fill="#c9a961" opacity="0.22"/><rect x="0" y="648" width="1200" height="252" fill="#131313"/><rect x="0" y="648" width="1200" height="176.4" fill="url(#reflect-59)"/><rect width="1200" height="900" fill="url(#vignette-59)" opacity="0.6"/></svg>
