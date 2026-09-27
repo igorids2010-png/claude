@@ -1,17 +1,23 @@
 "use client"
 
-import type { Empresa } from "@/lib/places"
+import type { Empresa, Fonte } from "@/lib/types"
 import { linkWhatsApp, textoEmpresa } from "@/lib/format"
 
 type Props = {
   empresa: Empresa
+  fonte: Fonte
   nicho: string
   index: number
   onCopy: (texto: string, aviso: string) => void
 }
 
 function nomeRede(url: string) {
-  const host = new URL(url).hostname.replace(/^www\./, "")
+  let host: string
+  try {
+    host = new URL(url).hostname.replace(/^www\./, "")
+  } catch {
+    return "Rede social"
+  }
   if (host.includes("instagram")) return "Instagram"
   if (host.includes("facebook") || host === "fb.com") return "Facebook"
   if (host.includes("wa.me") || host.includes("whatsapp")) return "WhatsApp"
@@ -20,7 +26,7 @@ function nomeRede(url: string) {
   return host
 }
 
-export function CompanyCard({ empresa, nicho, index, onCopy }: Props) {
+export function CompanyCard({ empresa, fonte, nicho, index, onCopy }: Props) {
   const whatsapp = linkWhatsApp(empresa.telefone)
 
   return (
@@ -77,23 +83,24 @@ export function CompanyCard({ empresa, nicho, index, onCopy }: Props) {
           <dd className="leading-relaxed text-muted">{empresa.endereco || "Endereço não informado"}</dd>
         </div>
 
-        <div className="flex items-center gap-3">
-          <dt className="sr-only">Avaliação</dt>
-          <span aria-hidden className="text-dim">
-            <StarIcon />
-          </span>
-          <dd className="font-mono text-xs text-muted">
-            {empresa.avaliacao != null ? (
-              <>
-                <span className="font-semibold text-star">{empresa.avaliacao.toFixed(1).replace(".", ",")}</span> ·{" "}
-                {empresa.totalAvaliacoes ?? 0} avaliações
-              </>
-            ) : (
-              "Sem avaliações"
-            )}
-            {empresa.redeSocial && (
-              <>
-                {" · "}
+        {(fonte === "google" || empresa.redeSocial) && (
+          <div className="flex items-center gap-3">
+            <dt className="sr-only">{fonte === "google" ? "Avaliação" : "Rede social"}</dt>
+            <span aria-hidden className="text-dim">
+              {fonte === "google" ? <StarIcon /> : <LinkIcon />}
+            </span>
+            <dd className="font-mono text-xs text-muted">
+              {fonte === "google" &&
+                (empresa.avaliacao != null ? (
+                  <>
+                    <span className="font-semibold text-star">{empresa.avaliacao.toFixed(1).replace(".", ",")}</span> ·{" "}
+                    {empresa.totalAvaliacoes ?? 0} avaliações
+                  </>
+                ) : (
+                  "Sem avaliações"
+                ))}
+              {fonte === "google" && empresa.redeSocial && " · "}
+              {empresa.redeSocial && (
                 <a
                   href={empresa.redeSocial}
                   target="_blank"
@@ -102,10 +109,10 @@ export function CompanyCard({ empresa, nicho, index, onCopy }: Props) {
                 >
                   {nomeRede(empresa.redeSocial)}
                 </a>
-              </>
-            )}
-          </dd>
-        </div>
+              )}
+            </dd>
+          </div>
+        )}
       </dl>
 
       <footer className="mt-auto flex flex-wrap gap-2 border-t border-line pt-4">
@@ -123,7 +130,7 @@ export function CompanyCard({ empresa, nicho, index, onCopy }: Props) {
             rel="noopener noreferrer"
             className="flex-1 rounded-xl border border-line bg-panel-2 px-4 py-2.5 text-center text-sm font-semibold text-fg transition hover:border-signal/50"
           >
-            Ver no Google Maps ↗
+            {fonte === "google" ? "Ver no Google Maps ↗" : "Conferir no Google Maps ↗"}
           </a>
         )}
       </footer>
@@ -144,6 +151,15 @@ function PinIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" />
       <circle cx="12" cy="10" r="3" />
+    </svg>
+  )
+}
+
+function LinkIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
     </svg>
   )
 }

@@ -1,3 +1,5 @@
+import { GRID_SIZE, SearchError, socialOnlyLink, type Emit, type Empresa } from "@/lib/types"
+
 const SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
 
 const CITY_FIELDS = ["places.id", "places.formattedAddress", "places.viewport"].join(",")
@@ -14,26 +16,8 @@ const BUSINESS_FIELDS = [
   "nextPageToken",
 ].join(",")
 
-const GRID_SIZE = 3
 const MAX_PAGES_PER_CELL = 3 // a Places API devolve no máximo 60 resultados (3 páginas de 20) por consulta
 const CELL_CONCURRENCY = 3
-
-// Links que contam como "não tem site próprio": só redes sociais, agregadores ou WhatsApp.
-const SOCIAL_HOSTS = [
-  "instagram.com",
-  "facebook.com",
-  "fb.com",
-  "linktr.ee",
-  "wa.me",
-  "whatsapp.com",
-  "api.whatsapp.com",
-  "tiktok.com",
-  "ifood.com.br",
-  "goo.gl",
-  "g.page",
-  "business.site",
-  "linkin.bio",
-]
 
 type LatLng = { latitude: number; longitude: number }
 type Viewport = { low: LatLng; high: LatLng }
@@ -51,23 +35,8 @@ type GooglePlace = {
   viewport?: Viewport
 }
 
-export type Empresa = {
-  id: string
-  nome: string
-  telefone: string | null
-  endereco: string
-  avaliacao: number | null
-  totalAvaliacoes: number | null
-  linkMaps: string | null
-  redeSocial: string | null
-}
-
-export type SearchEvent =
-  | { type: "progress"; percent: number; message: string; encontradas: number }
-  | { type: "result"; cidade: string; nicho: string; analisadas: number; empresas: Empresa[] }
-  | { type: "error"; message: string }
-
-export class PlacesError extends Error {}
+// Chave inválida, faturamento inativo ou API desativada: dá para cair na fonte gratuita.
+export class GoogleIndisponivelError extends SearchError {}
 
 async function searchText(
   apiKey: string,
@@ -89,7 +58,10 @@ async function searchText(
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
     const message = data?.error?.message || `Google Maps respondeu com erro ${response.status}`
-    throw new PlacesError(message)
+    if (response.status === 400 || response.status === 401 || response.status === 403) {
+      throw new GoogleIndisponivelError(message)
+    }
+    throw new SearchError(message)
   }
   return data
 }
@@ -109,15 +81,6 @@ function splitViewport(viewport: Viewport, size: number): Viewport[] {
     }
   }
   return cells
-}
-
-function socialOnlyLink(websiteUri: string): string | null {
-  try {
-    const host = new URL(websiteUri).hostname.replace(/^www\./, "").toLowerCase()
-    return SOCIAL_HOSTS.some((h) => host === h || host.endsWith(`.${h}`)) ? websiteUri : null
-  } catch {
-    return null
-  }
 }
 
 function toEmpresa(place: GooglePlace): Empresa | null {
@@ -141,10 +104,10 @@ function toEmpresa(place: GooglePlace): Empresa | null {
   }
 }
 
-export async function searchSemSite(
+export async function searchGoogle(
   apiKey: string,
   { cidade, nicho }: { cidade: string; nicho: string },
-  emit: (event: SearchEvent) => void,
+  emit: Emit,
   signal?: AbortSignal,
 ) {
   emit({ type: "progress", percent: 2, message: `Localizando ${cidade} no mapa…`, encontradas: 0 })
@@ -152,7 +115,7 @@ export async function searchSemSite(
   const cityData = await searchText(apiKey, CITY_FIELDS, { textQuery: `${cidade}, Brasil`, pageSize: 1 }, signal)
   const city = cityData.places?.[0]
   if (!city?.viewport) {
-    throw new PlacesError(`Não encontrei a cidade "${cidade}" no Google Maps. Confira o nome e tente de novo.`)
+    throw new SearchError(`Não encontrei a cidade "${cidade}" no Google Maps. Confira o nome e tente de novo.`)
   }
 
   const cells = splitViewport(city.viewport, GRID_SIZE)
@@ -217,6 +180,7 @@ export async function searchSemSite(
   emit({ type: "progress", percent: 100, message: "Pronto!", encontradas: encontrados.size })
   emit({
     type: "result",
+    fonte: "google",
     cidade: city.formattedAddress ?? cidade,
     nicho,
     analisadas: encontrados.size,

@@ -1,4 +1,6 @@
-import { PlacesError, searchSemSite, type SearchEvent } from "@/lib/places"
+import { GoogleIndisponivelError, searchGoogle } from "@/lib/google"
+import { searchOsm } from "@/lib/osm"
+import { SearchError, type SearchEvent } from "@/lib/types"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -20,21 +22,29 @@ export async function GET(request: Request) {
       }
 
       try {
-        if (!apiKey) {
-          throw new PlacesError(
-            "Chave do Google Maps não configurada. Defina GOOGLE_MAPS_API_KEY no .env.local (ou nas variáveis de ambiente da Vercel).",
-          )
-        }
         if (!cidade || !nicho) {
-          throw new PlacesError("Informe a cidade e o nicho para buscar.")
+          throw new SearchError("Informe a cidade e o nicho para buscar.")
         }
 
-        await searchSemSite(apiKey, { cidade, nicho }, emit, request.signal)
+        // Google Maps quando a chave funciona; senão, OpenStreetMap (gratuito).
+        let usouGoogle = false
+        if (apiKey) {
+          try {
+            await searchGoogle(apiKey, { cidade, nicho }, emit, request.signal)
+            usouGoogle = true
+          } catch (err) {
+            if (!(err instanceof GoogleIndisponivelError)) throw err
+            console.warn("Google Maps indisponível, usando OpenStreetMap:", err.message)
+          }
+        }
+        if (!usouGoogle) {
+          await searchOsm({ cidade, nicho }, emit, request.signal)
+        }
       } catch (err) {
         if (!request.signal.aborted) {
           const message =
-            err instanceof PlacesError ? err.message : "Falha ao consultar o Google Maps. Tente novamente em instantes."
-          if (!(err instanceof PlacesError)) console.error(err)
+            err instanceof SearchError ? err.message : "Falha ao consultar o mapa. Tente novamente em instantes."
+          if (!(err instanceof SearchError)) console.error(err)
           emit({ type: "error", message })
         }
       } finally {

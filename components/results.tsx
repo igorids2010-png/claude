@@ -1,11 +1,14 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import type { Empresa } from "@/lib/places"
+import type { Empresa, Fonte } from "@/lib/types"
 import { gerarCsv, normalizar, textoTodas } from "@/lib/format"
 import { CompanyCard } from "@/components/company-card"
 
+const NOME_FONTE: Record<Fonte, string> = { google: "Google Maps", osm: "OpenStreetMap" }
+
 type Props = {
+  fonte: Fonte
   cidade: string
   nicho: string
   analisadas: number
@@ -19,7 +22,7 @@ function nomeArquivo(cidade: string, nicho: string) {
   return `sem-site-${slug}.csv`
 }
 
-export function Results({ cidade, nicho, analisadas, empresas, onNewSearch, onCopy }: Props) {
+export function Results({ fonte, cidade, nicho, analisadas, empresas, onNewSearch, onCopy }: Props) {
   const [filtro, setFiltro] = useState("")
 
   const visiveis = useMemo(() => {
@@ -49,9 +52,17 @@ export function Results({ cidade, nicho, analisadas, empresas, onNewSearch, onCo
           </h2>
           <p className="text-muted">
             {nicho} em {cidade} ·{" "}
-            <span className="font-mono tabular-nums text-fg">{analisadas}</span> analisadas no Google Maps
+            <span className="font-mono tabular-nums text-fg">{analisadas}</span> analisadas no {NOME_FONTE[fonte]}
           </p>
         </div>
+
+        {fonte === "osm" && (
+          <p className="rounded-2xl border border-star/30 bg-star/[0.06] px-4 py-3 text-sm leading-relaxed text-muted">
+            <span className="font-semibold text-star">Fonte gratuita (OpenStreetMap).</span> Algumas empresas podem ter
+            site que não foi cadastrado no mapa. Antes de entrar em contato, confira no botão{" "}
+            <span className="text-fg">“Conferir no Google Maps”</span>.
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <button
@@ -91,7 +102,15 @@ export function Results({ cidade, nicho, analisadas, empresas, onNewSearch, onCo
         )}
       </div>
 
-      {empresas.length === 0 ? (
+      {analisadas === 0 ? (
+        <div className="rounded-[28px] border border-dashed border-line px-6 py-14 text-center">
+          <p className="font-display text-xl font-semibold">Nenhuma empresa desse nicho no mapa.</p>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+            O {NOME_FONTE[fonte]} não tem {nicho.toLowerCase()} cadastrados em {cidade}. Tente um nicho parecido (ex:
+            “restaurantes” em vez de “hamburguerias”) ou uma cidade maior.
+          </p>
+        </div>
+      ) : empresas.length === 0 ? (
         <div className="rounded-[28px] border border-dashed border-line px-6 py-14 text-center">
           <p className="font-display text-xl font-semibold">Todo mundo aqui já tem site.</p>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted">
@@ -104,7 +123,7 @@ export function Results({ cidade, nicho, analisadas, empresas, onNewSearch, onCo
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {visiveis.map((empresa, i) => (
-            <CompanyCard key={empresa.id} empresa={empresa} nicho={nicho} index={i} onCopy={onCopy} />
+            <CompanyCard key={empresa.id} empresa={empresa} fonte={fonte} nicho={nicho} index={i} onCopy={onCopy} />
           ))}
         </div>
       )}

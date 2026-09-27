@@ -1,4 +1,4 @@
-import type { Empresa } from "@/lib/places"
+import type { Empresa } from "@/lib/types"
 
 export function soDigitos(telefone: string) {
   return telefone.replace(/\D/g, "")
@@ -24,7 +24,7 @@ export function textoEmpresa(e: Empresa, nicho: string) {
     `Nicho: ${nicho}`,
     `Telefone: ${e.telefone ?? "Não informado"}`,
     `Endereço: ${e.endereco || "Não informado"}`,
-    `Avaliação: ${textoAvaliacao(e)}`,
+    e.avaliacao != null ? `Avaliação: ${textoAvaliacao(e)}` : null,
     e.redeSocial ? `Rede social: ${e.redeSocial}` : null,
     `Google Maps: ${e.linkMaps ?? "—"}`,
   ]

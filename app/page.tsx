@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import type { Empresa, SearchEvent } from "@/lib/places"
+import type { Empresa, Fonte, SearchEvent } from "@/lib/types"
 import { CAPITAIS, CIDADES_GRANDES, NICHOS } from "@/lib/sugestoes"
 import { Combobox } from "@/components/combobox"
 import { ScanProgress } from "@/components/scan-progress"
@@ -10,7 +10,7 @@ import { Results } from "@/components/results"
 type Etapa =
   | { tipo: "form" }
   | { tipo: "carregando"; percent: number; message: string; encontradas: number }
-  | { tipo: "resultado"; cidade: string; nicho: string; analisadas: number; empresas: Empresa[] }
+  | { tipo: "resultado"; fonte: Fonte; cidade: string; nicho: string; analisadas: number; empresas: Empresa[] }
   | { tipo: "erro"; message: string }
 
 const GRUPOS_CIDADES = [
@@ -21,7 +21,7 @@ const GRUPOS_NICHOS = [{ titulo: "Nichos populares", itens: NICHOS }]
 
 const PASSOS = [
   { titulo: "Escolha cidade e nicho", texto: "Qualquer cidade do Brasil, qualquer tipo de negócio." },
-  { titulo: "O radar varre o Google Maps", texto: "A cidade é dividida em regiões para trazer o máximo de empresas." },
+  { titulo: "O radar varre o mapa", texto: "A cidade é dividida em regiões para trazer o máximo de empresas." },
   { titulo: "Copie quem não tem site", texto: "Telefone, endereço e link prontos para você entrar em contato." },
 ]
 
@@ -125,7 +125,7 @@ export default function Home() {
               Radar <span className="text-signal">Sem Site</span>
             </h1>
             <p className="mt-5 max-w-md text-lg text-muted text-balance">
-              Encontre empresas no Google Maps que ainda não têm site.
+              Encontre empresas da sua cidade que ainda não têm site.
             </p>
           </>
         )}
@@ -194,6 +194,7 @@ export default function Home() {
 
       {etapa.tipo === "resultado" && (
         <Results
+          fonte={etapa.fonte}
           cidade={etapa.cidade}
           nicho={etapa.nicho}
           analisadas={etapa.analisadas}
