@@ -2,9 +2,29 @@ import { GRID_SIZE, SearchError, socialOnlyLink, type Emit, type Empresa } from 
 import { normalizar } from "@/lib/format"
 
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
-const OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+// Servidores públicos do Overpass: cada região vai para um, e se ele falhar tenta o próximo.
+const OVERPASS_URLS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+]
 // As APIs públicas do OpenStreetMap pedem um User-Agent que identifique o app.
 const USER_AGENT = "RadarSemSite/2.0 (+https://github.com/igorids2010-png/claude)"
+
+// A função na Vercel é encerrada em 60s; a busca inteira precisa caber bem antes disso.
+const PRAZO_TOTAL_MS = 45_000
+const TIMEOUT_CIDADE_MS = 12_000
+const TIMEOUT_CONSULTA_MS = 20_000
+
+function sinalComTimeout(signal: AbortSignal | undefined, ms: number) {
+  const timeout = AbortSignal.timeout(Math.max(1, ms))
+  return signal ? AbortSignal.any([signal, timeout]) : timeout
+}
+
+function descreverFalha(err: unknown) {
+  if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) return "sem resposta"
+  return "falha de conexão"
+}
 
 type Bbox = { s: number; w: number; n: number; e: number }
 
@@ -72,8 +92,19 @@ async function localizarCidade(cidade: string, signal?: AbortSignal) {
   url.searchParams.set("addressdetails", "1")
   url.searchParams.set("accept-language", "pt-BR")
 
-  const response = await fetch(url, { headers: { "User-Agent": USER_AGENT }, signal })
-  if (!response.ok) throw new SearchError("Não consegui acessar o mapa agora. Tente de novo em instantes.")
+  let response: Response
+  try {
+    response = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      signal: sinalComTimeout(signal, TIMEOUT_CIDADE_MS),
+    })
+  } catch (err) {
+    if (signal?.aborted) throw err
+    throw new SearchError(`Não consegui localizar a cidade: o serviço de mapas deu ${descreverFalha(err)}. Tente de novo em instantes.`)
+  }
+  if (!response.ok) {
+    throw new SearchError(`Não consegui localizar a cidade: o serviço de mapas respondeu com erro ${response.status}. Tente de novo em instantes.`)
+  }
 
   const [lugar] = (await response.json()) as {
     osm_type: string
@@ -109,27 +140,53 @@ function dividirBbox({ s, w, n, e }: Bbox, tamanho: number): Bbox[] {
   return regioes
 }
 
-async function consultarOverpass(query: string, signal?: AbortSignal): Promise<OsmElement[]> {
-  for (let tentativa = 0; tentativa < 3; tentativa++) {
-    const response = await fetch(OVERPASS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT },
-      body: new URLSearchParams({ data: query }),
-      signal,
-    })
-    if (response.ok) return ((await response.json()) as { elements: OsmElement[] }).elements
-    // 429/504: servidor público ocupado; espera um pouco e tenta de novo
-    if (response.status !== 429 && response.status !== 504) break
-    await new Promise((r) => setTimeout(r, 2500 * (tentativa + 1)))
+type RespostaOverpass = { ok: true; elementos: OsmElement[] } | { ok: false; motivo: string }
+
+// Tenta cada servidor a partir de `primeiro`, respeitando o prazo total da busca.
+async function consultarOverpass(
+  query: string,
+  primeiro: number,
+  prazoFinal: number,
+  signal?: AbortSignal,
+): Promise<RespostaOverpass> {
+  const motivos: string[] = []
+
+  for (let i = 0; i < OVERPASS_URLS.length; i++) {
+    const url = OVERPASS_URLS[(primeiro + i) % OVERPASS_URLS.length]
+    const host = new URL(url).host
+    const restante = prazoFinal - Date.now()
+    if (restante < 1500) {
+      motivos.push("tempo esgotado")
+      break
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT },
+        body: new URLSearchParams({ data: query }),
+        signal: sinalComTimeout(signal, Math.min(TIMEOUT_CONSULTA_MS, restante)),
+      })
+      if (response.ok) {
+        const dados = (await response.json()) as { elements?: OsmElement[] }
+        return { ok: true, elementos: dados.elements ?? [] }
+      }
+      motivos.push(`${host} respondeu ${response.status}`)
+    } catch (err) {
+      if (signal?.aborted) throw err
+      motivos.push(`${host}: ${descreverFalha(err)}`)
+    }
   }
-  throw new SearchError("O servidor do mapa está ocupado agora. Espere um minuto e tente de novo.")
+
+  return { ok: false, motivo: motivos.join(", ") }
 }
 
 function montarQuery(filtros: string[], regiao: Bbox, areaId: number | null) {
   const caixa = `(${regiao.s},${regiao.w},${regiao.n},${regiao.e})`
   const area = areaId ? "(area.a)" : ""
   const seletores = filtros.map((f) => `nwr${f}["name"]${area}${caixa};`).join("")
-  return `[out:json][timeout:25];${areaId ? `area(id:${areaId})->.a;` : ""}(${seletores});out tags;`
+  const timeout = Math.round(TIMEOUT_CONSULTA_MS / 1000)
+  return `[out:json][timeout:${timeout}];${areaId ? `area(id:${areaId})->.a;` : ""}(${seletores});out tags;`
 }
 
 function formatarTelefone(bruto: string): string {
@@ -185,26 +242,57 @@ function toEmpresa(el: OsmElement, cidade: string): Empresa | null {
   }
 }
 
-export async function searchOsm({ cidade, nicho }: { cidade: string; nicho: string }, emit: Emit, signal?: AbortSignal) {
+export async function searchOsm(
+  { cidade, nicho }: { cidade: string; nicho: string },
+  emit: Emit,
+  signal?: AbortSignal,
+  prazoMs = PRAZO_TOTAL_MS,
+) {
+  const prazoFinal = Date.now() + prazoMs
+
   emit({ type: "progress", percent: 3, message: `Localizando ${cidade} no mapa…`, encontradas: 0 })
   const lugar = await localizarCidade(cidade, signal)
 
   const filtros = filtrosDoNicho(nicho)
   const regioes = dividirBbox(lugar.bbox, GRID_SIZE)
   const encontrados = new Map<string, OsmElement>()
+  const falhas: string[] = []
+  let concluidas = 0
+
+  const reportar = () =>
+    emit({
+      type: "progress",
+      percent: Math.round(8 + (concluidas / regioes.length) * 87),
+      message:
+        concluidas < regioes.length
+          ? `Varrendo o mapa: ${concluidas} de ${regioes.length} regiões prontas…`
+          : "Todas as regiões varridas.",
+      encontradas: encontrados.size,
+    })
 
   emit({ type: "progress", percent: 8, message: `Dividindo ${lugar.nome} em ${regioes.length} regiões…`, encontradas: 0 })
 
-  // Uma região por vez: o servidor público do OpenStreetMap limita consultas simultâneas.
-  for (const [i, regiao] of regioes.entries()) {
-    emit({
-      type: "progress",
-      percent: Math.round(8 + (i / regioes.length) * 87),
-      message: `Varrendo região ${i + 1} de ${regioes.length}…`,
-      encontradas: encontrados.size,
-    })
-    const elementos = await consultarOverpass(montarQuery(filtros, regiao, lugar.areaId), signal)
-    for (const el of elementos) encontrados.set(`${el.type}/${el.id}`, el)
+  // Um trabalhador por servidor, cada um começando pelo seu; se ele falhar, a região tenta os outros.
+  const fila = [...regioes]
+  await Promise.all(
+    OVERPASS_URLS.map(async (_, servidor) => {
+      while (fila.length > 0) {
+        const regiao = fila.shift()!
+        const resposta = await consultarOverpass(montarQuery(filtros, regiao, lugar.areaId), servidor, prazoFinal, signal)
+        if (resposta.ok) {
+          for (const el of resposta.elementos) encontrados.set(`${el.type}/${el.id}`, el)
+        } else {
+          falhas.push(resposta.motivo)
+        }
+        concluidas++
+        reportar()
+      }
+    }),
+  )
+
+  if (falhas.length === regioes.length) {
+    const motivos = [...new Set(falhas.flatMap((f) => f.split(", ")))].join("; ")
+    throw new SearchError(`O servidor do mapa não respondeu (${motivos}). Espere um minuto e tente de novo.`)
   }
 
   emit({ type: "progress", percent: 97, message: "Separando quem não tem site…", encontradas: encontrados.size })
@@ -216,5 +304,13 @@ export async function searchOsm({ cidade, nicho }: { cidade: string; nicho: stri
     .sort((a, b) => Number(!!b.telefone) - Number(!!a.telefone) || a.nome.localeCompare(b.nome, "pt-BR"))
 
   emit({ type: "progress", percent: 100, message: "Pronto!", encontradas: encontrados.size })
-  emit({ type: "result", fonte: "osm", cidade: lugar.nome, nicho, analisadas: encontrados.size, empresas })
+  emit({
+    type: "result",
+    fonte: "osm",
+    cidade: lugar.nome,
+    nicho,
+    analisadas: encontrados.size,
+    empresas,
+    regioesSemResposta: falhas.length,
+  })
 }

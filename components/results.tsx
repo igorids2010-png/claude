@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import type { Empresa, Fonte } from "@/lib/types"
+import { GRID_SIZE, type Empresa, type Fonte } from "@/lib/types"
 import { gerarCsv, normalizar, textoTodas } from "@/lib/format"
 import { CompanyCard } from "@/components/company-card"
 
@@ -9,6 +9,7 @@ const NOME_FONTE: Record<Fonte, string> = { google: "Google Maps", osm: "OpenStr
 
 type Props = {
   fonte: Fonte
+  regioesSemResposta: number
   cidade: string
   nicho: string
   analisadas: number
@@ -22,7 +23,7 @@ function nomeArquivo(cidade: string, nicho: string) {
   return `sem-site-${slug}.csv`
 }
 
-export function Results({ fonte, cidade, nicho, analisadas, empresas, onNewSearch, onCopy }: Props) {
+export function Results({ fonte, regioesSemResposta, cidade, nicho, analisadas, empresas, onNewSearch, onCopy }: Props) {
   const [filtro, setFiltro] = useState("")
 
   const visiveis = useMemo(() => {
@@ -55,6 +56,13 @@ export function Results({ fonte, cidade, nicho, analisadas, empresas, onNewSearc
             <span className="font-mono tabular-nums text-fg">{analisadas}</span> analisadas no {NOME_FONTE[fonte]}
           </p>
         </div>
+
+        {regioesSemResposta > 0 && (
+          <p className="rounded-2xl border border-danger/35 bg-danger/[0.06] px-4 py-3 text-sm leading-relaxed text-muted">
+            <span className="font-semibold text-danger">Busca incompleta.</span> {regioesSemResposta} de {GRID_SIZE * GRID_SIZE} regiões da
+            cidade não responderam a tempo, então podem faltar empresas. Faça uma nova busca para tentar completar.
+          </p>
+        )}
 
         {fonte === "osm" && (
           <p className="rounded-2xl border border-star/30 bg-star/[0.06] px-4 py-3 text-sm leading-relaxed text-muted">

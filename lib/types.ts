@@ -13,7 +13,16 @@ export type Empresa = {
 
 export type SearchEvent =
   | { type: "progress"; percent: number; message: string; encontradas: number }
-  | { type: "result"; fonte: Fonte; cidade: string; nicho: string; analisadas: number; empresas: Empresa[] }
+  | {
+      type: "result"
+      fonte: Fonte
+      cidade: string
+      nicho: string
+      analisadas: number
+      empresas: Empresa[]
+      // regiões do mapa que não responderam a tempo (lista pode estar incompleta)
+      regioesSemResposta?: number
+    }
   | { type: "error"; message: string }
 
 export type Emit = (event: SearchEvent) => void

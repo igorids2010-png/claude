@@ -10,7 +10,15 @@ import { Results } from "@/components/results"
 type Etapa =
   | { tipo: "form" }
   | { tipo: "carregando"; percent: number; message: string; encontradas: number }
-  | { tipo: "resultado"; fonte: Fonte; cidade: string; nicho: string; analisadas: number; empresas: Empresa[] }
+  | {
+      tipo: "resultado"
+      fonte: Fonte
+      cidade: string
+      nicho: string
+      analisadas: number
+      empresas: Empresa[]
+      regioesSemResposta?: number
+    }
   | { tipo: "erro"; message: string }
 
 const GRUPOS_CIDADES = [
@@ -89,7 +97,11 @@ export default function Home() {
         }
       }
 
-      if (!terminou) throw new Error("A busca foi interrompida antes de terminar.")
+      if (!terminou) {
+        throw new Error(
+          "O servidor encerrou a busca antes de terminar (provavelmente o mapa demorou demais para responder). Tente de novo em instantes.",
+        )
+      }
     } catch (err) {
       if (controller.signal.aborted) return
       setEtapa({ tipo: "erro", message: err instanceof Error ? err.message : "Algo deu errado na busca." })
@@ -195,6 +207,7 @@ export default function Home() {
       {etapa.tipo === "resultado" && (
         <Results
           fonte={etapa.fonte}
+          regioesSemResposta={etapa.regioesSemResposta ?? 0}
           cidade={etapa.cidade}
           nicho={etapa.nicho}
           analisadas={etapa.analisadas}
