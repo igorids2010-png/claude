@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #090d13;
+  --color-panel: #10161f;
+  --color-panel-2: #151d29;
+  --color-line: #223049;
+  --color-line-soft: #1a2332;
+  --color-fg: #e9eef5;
+  --color-muted: #8b96a8;
+  --color-dim: #5c6779;
+  --color-signal: #ff7a45;
+  --color-signal-soft: #ffb488;
+  --color-star: #f2c14e;
+  --color-danger: #ff6b6b;
+  --color-ok: #4ad295;
+
+  --font-display: var(--nf-display), system-ui, sans-serif;
+  --font-sans: var(--nf-sans), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--nf-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  --animate-sweep: sweep 2.6s linear infinite;
+  --animate-blip: blip 2.6s ease-out infinite;
+  --animate-rise: rise 0.4s ease both;
+
+  @keyframes sweep {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes blip {
+    0% { opacity: 0; transform: scale(0.4); }
+    12% { opacity: 1; transform: scale(1); }
+    70% { opacity: 0.25; }
+    100% { opacity: 0; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 1px 1px, var(--color-line-soft) 1px, transparent 1.6px) 0 0 / 26px 26px,
+    radial-gradient(ellipse 70% 45% at 50% -10%, rgb(255 122 69 / 0.08), transparent 70%),
+    var(--color-ink);
+  background-attachment: fixed;
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgb(255 122 69 / 0.25);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-signal-soft);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,18 +1,25 @@
 {
-  "name": "sem-site-bot",
-  "version": "1.0.0",
-  "description": "Bot que busca no Google Maps lugares de um determinado ramo que ainda não possuem site.",
-  "main": "server.js",
-  "type": "commonjs",
-  "engines": {
-    "node": ">=18"
-  },
+  "name": "radar-sem-site",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Encontra no Google Maps empresas de uma cidade e nicho que ainda não têm site.",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2"
+    "next": "^16.3.6",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3"
   }
 }

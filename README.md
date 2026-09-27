@@ -1,92 +1,47 @@
 # Radar Sem Site
 
-Bot com visual moderno (tema escuro estilo console de radar) que varre o Google Maps por **nicho** e **cidade** e mostra apenas os estabelecimentos que **não possuem site cadastrado** — ótimo para prospecção de clientes que precisam de um site.
+Ferramenta de prospecção: você escolhe uma **cidade** e um **nicho**, o radar varre o Google Maps e mostra só as empresas que **não têm site** (ou que só têm Instagram/Facebook/WhatsApp), com telefone, endereço e link prontos para copiar.
 
 ## Como funciona
 
-1. Você escolhe o **nicho** — digitando livremente (ex: "lanchonetes", "clínicas odontológicas") ou clicando em um dos atalhos prontos (lanchonetes, restaurantes, clínicas odontológicas, bares, mercados, salões de beleza, petshops, academias, padarias, farmácias, oficinas mecânicas, comércio local).
-2. Você escolhe onde buscar:
-   - selecionando **Estado** + **Cidade**; ou
-   - clicando em **"Usar minha localização atual"** (o navegador pede permissão de geolocalização e você escolhe o raio de busca: 1 a 20 km).
-3. O servidor consulta a Google Places API — **Nearby Search** quando é usada a localização atual, ou **Text Search** quando é escolhido estado/cidade.
-4. Para cada lugar encontrado, ele busca os detalhes na mesma API e verifica o campo `website`.
-5. Só são exibidos os lugares **sem site**, com nome, endereço, telefone, avaliação e link para o Google Maps.
+1. **Cidade + nicho** — a cidade pode ser qualquer uma do Brasil (as capitais e cidades grandes aparecem como sugestão); o nicho pode ser escolhido da lista ou digitado livremente.
+2. **Varredura com progresso de 0 a 100%** — o servidor localiza a cidade no Google Maps, divide a área dela em uma grade de 3×3 regiões e busca o nicho em cada região (até 60 resultados por região). Isso traz bem mais empresas do que uma busca única (limitada a 60). O progresso é enviado ao navegador em tempo real.
+3. **Resultado** — só aparecem empresas abertas sem site próprio, ordenadas pelo número de avaliações. Cada card tem telefone (com atalho para WhatsApp quando é celular), endereço, avaliação, link do Google Maps e o botão **Copiar dados**, que gera um bloco pronto para colar:
 
-O Google Maps (Places API) é a única fonte de dados: é ele quem decide se um estabelecimento existe, onde fica e se tem site cadastrado.
+   ```
+   Empresa: Lanchonete do Zé
+   Nicho: Lanchonetes
+   Telefone: (41) 99876-1234
+   Endereço: R. Mateus Leme, 812 - São Francisco, Curitiba - PR
+   Avaliação: 4,6 (312 avaliações)
+   Google Maps: https://maps.google.com/?cid=...
+   ```
 
-> A geolocalização do navegador só funciona em contexto seguro (HTTPS ou `localhost`) — funciona tanto rodando local quanto no deploy da Vercel.
+   Também dá para **Copiar todas** ou **Baixar CSV** (abre direto no Excel).
 
-## Pré-requisitos
+## Stack
 
-- Node.js 18 ou superior.
-- Uma chave de API do Google Cloud com as APIs **Places API** habilitadas (e faturamento ativo na conta do Google Cloud — o Google exige isso mesmo dentro da cota gratuita).
+- Next.js (App Router) + TypeScript + Tailwind CSS
+- `app/api/search/route.ts` — rota que responde em streaming NDJSON (`progress` → `result` | `error`)
+- `lib/places.ts` — integração com a **Google Places API (New)** (`places:searchText`)
 
 ## Configuração
 
-1. Instale as dependências:
+1. No [Google Cloud Console](https://console.cloud.google.com/), habilite a **Places API (New)** e crie uma chave de API (a conta precisa ter faturamento ativo).
+2. Instale e configure:
 
    ```bash
    npm install
+   cp .env.example .env.local   # e coloque sua chave em GOOGLE_MAPS_API_KEY
+   npm run dev
    ```
 
-2. Copie o arquivo de exemplo de variáveis de ambiente e cole sua chave:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Edite `.env` e defina:
-
-   ```
-   GOOGLE_MAPS_API_KEY=sua_chave_aqui
-   ```
-
-3. Inicie o servidor:
-
-   ```bash
-   npm start
-   ```
-
-4. Acesse `http://localhost:3000` no navegador.
+3. Acesse `http://localhost:3000`.
 
 ## Deploy na Vercel
 
-O projeto já está estruturado para rodar na Vercel sem configuração extra:
+Importe o repositório na Vercel (o framework Next.js é detectado sozinho) e adicione a variável de ambiente `GOOGLE_MAPS_API_KEY` em **Settings → Environment Variables**.
 
-- `public/` é servido como site estático (é onde ficam `index.html`, `style.css` e `script.js`).
-- `api/search.js` vira automaticamente uma Serverless Function em `/api/search`.
-- `lib/places.js` tem a lógica de busca compartilhada entre o servidor local (`server.js`) e a função da Vercel.
+## Custos
 
-### Passo a passo
-
-1. Instale a CLI da Vercel (se ainda não tiver):
-
-   ```bash
-   npm install -g vercel
-   ```
-
-2. Rode o deploy a partir da raiz do projeto e siga as instruções (login, nome do projeto, etc.):
-
-   ```bash
-   vercel
-   ```
-
-3. Configure a variável de ambiente com sua chave da API (pode ser feito pela CLI ou pelo painel do projeto em vercel.com → Settings → Environment Variables):
-
-   ```bash
-   vercel env add GOOGLE_MAPS_API_KEY
-   ```
-
-4. Faça o deploy de produção:
-
-   ```bash
-   vercel --prod
-   ```
-
-Alternativa: conecte o repositório do GitHub diretamente pelo painel da Vercel ("Add New Project" → selecione o repositório) e adicione a variável `GOOGLE_MAPS_API_KEY` em Settings → Environment Variables antes do primeiro deploy.
-
-## Observações
-
-- A API do Google Places retorna no máximo 60 resultados por busca (3 páginas de 20), então buscas muito amplas (ex: "restaurantes" sem localização, em uma cidade grande) mostrarão apenas os 60 primeiros lugares retornados pelo Google.
-- Cada busca faz uma chamada de "Text Search" + uma chamada de "Place Details" por lugar encontrado — fique atento aos custos/cotas da sua chave no Google Cloud.
-- Lugares marcados como permanentemente fechados são ignorados automaticamente.
+Cada busca faz 1 consulta para localizar a cidade + até 27 consultas de Text Search (9 regiões × 3 páginas). Como o app pede telefone e site, as consultas entram na faixa "Enterprise" da Places API — acompanhe o uso no Google Cloud e, se quiser, defina uma cota diária na chave.
