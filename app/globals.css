@@ -59,9 +59,11 @@ body {
   background: rgb(255 122 69 / 0.25);
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-signal-soft);
-  outline-offset: 2px;
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-signal-soft);
+    outline-offset: 2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
