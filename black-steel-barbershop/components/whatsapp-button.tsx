@@ -14,7 +14,7 @@ export function WhatsAppButton() {
       aria-label="Agendar pelo WhatsApp (abre em nova aba)"
       initial={{ opacity: 0, scale: 0.6, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ delay: 1.8, type: "spring", stiffness: 260, damping: 20 }}
+      transition={{ delay: 2.6, type: "spring", stiffness: 260, damping: 20 }}
       whileHover={{ scale: 1.08 }}
       whileTap={{ scale: 0.95 }}
       className="group fixed right-5 bottom-5 z-50 flex items-center gap-3 sm:right-8 sm:bottom-8"

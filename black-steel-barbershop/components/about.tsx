@@ -18,7 +18,7 @@ export function About() {
           <div className="grain relative aspect-[4/5] overflow-hidden bg-surface-2">
             <Image
               src={images.about}
-              alt="Interior da Black Steel Barbershop com cadeiras clássicas e iluminação baixa"
+              alt="Salão da Black Steel com parede de tijolos e cadeiras de couro preto enfileiradas"
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="object-cover grayscale contrast-110"

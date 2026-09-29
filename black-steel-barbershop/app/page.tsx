@@ -5,6 +5,7 @@ import { Footer } from "@/components/footer"
 import { Gallery } from "@/components/gallery"
 import { Header } from "@/components/header"
 import { Hero } from "@/components/hero"
+import { Marquee } from "@/components/marquee"
 import { Services } from "@/components/services"
 import { Stats } from "@/components/stats"
 import { Testimonials } from "@/components/testimonials"
@@ -16,6 +17,7 @@ export default function Home() {
       <Header />
       <main id="conteudo">
         <Hero />
+        <Marquee />
         <Stats />
         <Services />
         <Gallery />

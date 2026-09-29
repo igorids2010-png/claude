@@ -68,9 +68,20 @@ export const navLinks = [
 ]
 
 export const images = {
-  hero: unsplash("photo-1503951914875-452162b0f3f1", 2000),
-  about: unsplash("photo-1585747860715-2ba37e788b70", 1400),
+  // `position` é o ponto focal da foto (object-position), útil para o corte no celular.
+  // Salão vazio: parede de tijolos, espelhos e cadeiras pretas do lado direito da foto.
+  hero: { src: unsplash("photo-1585747860715-2ba37e788b70", 2400), position: "68% 50%" },
+  about: unsplash("photo-1633681926022-84c23e8cb2d6", 1400),
 }
+
+export const marqueeItems = [
+  "Corte clássico",
+  "Barba na navalha",
+  "Toalha quente",
+  "Tratamento capilar",
+  "Sobrancelha",
+  "Combo corte + barba",
+]
 
 export const stats = [
   { value: 8, prefix: "+", suffix: "", label: "Anos de tradição" },
@@ -85,7 +96,7 @@ export const services: Service[] = [
     description: "Tesoura e máquina, acabamento na navalha e finalização com pomada.",
     price: 70,
     duration: "45 min",
-    image: unsplash("photo-1621605815971-fbc98d665033", 900),
+    image: unsplash("photo-1512864084360-7c0c4d0a0845", 900),
   },
   {
     id: "barba-completa",
@@ -93,7 +104,7 @@ export const services: Service[] = [
     description: "Toalha quente, óleo pré-barba, navalha e hidratação pós-barba.",
     price: 55,
     duration: "35 min",
-    image: unsplash("photo-1599351431202-1e0f0137899a", 900),
+    image: unsplash("photo-1532710093739-9470acff878f", 900),
   },
   {
     id: "combo",
@@ -101,7 +112,7 @@ export const services: Service[] = [
     description: "A experiência completa Black Steel, com drink de cortesia.",
     price: 110,
     duration: "1h 20min",
-    image: unsplash("photo-1622286342621-4bd786c2447c", 900),
+    image: unsplash("photo-1503951914875-452162b0f3f1", 900),
     featured: true,
   },
   {
@@ -110,7 +121,7 @@ export const services: Service[] = [
     description: "Esfoliação do couro cabeludo, máscara nutritiva e massagem relaxante.",
     price: 90,
     duration: "40 min",
-    image: unsplash("photo-1605497788044-5a32c7078486", 900),
+    image: unsplash("photo-1590540179852-2110a54f813a", 900),
   },
   {
     id: "sobrancelha",
@@ -118,42 +129,41 @@ export const services: Service[] = [
     description: "Alinhamento na navalha ou pinça, mantendo o traço natural.",
     price: 30,
     duration: "15 min",
-    image: unsplash("photo-1512690459411-b9245aed614b", 900),
+    image: unsplash("photo-1654097800183-574ba7368f74", 900),
   },
 ]
 
 export const gallery: GalleryItem[] = [
   {
-    src: unsplash("photo-1585747860715-2ba37e788b70"),
-    alt: "Salão da barbearia com cadeiras de couro e espelhos",
-    caption: "O espaço",
+    src: unsplash("photo-1621645582931-d1d3e6564943"),
+    alt: "Cadeira de barbeiro diante do espelho, no salão vazio",
+    caption: "A cadeira",
     tall: true,
   },
   {
-    src: unsplash("photo-1503951914875-452162b0f3f1"),
-    alt: "Barbeiro finalizando um corte com máquina",
-    caption: "Precisão no detalhe",
-    wide: true,
-  },
-  {
-    src: unsplash("photo-1599351431202-1e0f0137899a"),
-    alt: "Barba sendo aparada com navalha",
-    caption: "Barba na navalha",
-  },
-  {
-    src: unsplash("photo-1621605815971-fbc98d665033"),
-    alt: "Cliente de perfil após um corte degradê",
-    caption: "Degradê clássico",
-  },
-  {
-    src: unsplash("photo-1622286342621-4bd786c2447c"),
-    alt: "Barbeiro atendendo um cliente na cadeira",
-    caption: "Bastidores",
+    src: unsplash("photo-1633681926035-ec1ac984418a"),
+    alt: "Salão com cadeiras de couro preto, espelhos e lustre",
+    caption: "O salão",
     wide: true,
   },
   {
     src: unsplash("photo-1596728325488-58c87691e9af"),
-    alt: "Ferramentas de barbeiro organizadas sobre a bancada",
+    alt: "Barbeiro fazendo a barba de um cliente com navalha",
+    caption: "Barba na navalha",
+  },
+  {
+    src: unsplash("photo-1635273051839-003bf06a8751"),
+    alt: "Corte com máquina, detalhe do degradê",
+    caption: "Degradê na máquina",
+  },
+  {
+    src: unsplash("photo-1593702288056-7927b442d0fa"),
+    alt: "Barbeiro atendendo um cliente na cadeira",
+    caption: "Bastidores",
+  },
+  {
+    src: unsplash("photo-1587909209111-5097ee578ec3"),
+    alt: "Pente e pote de creme de barbear sobre a bancada de madeira",
     caption: "Ferramentas do ofício",
   },
 ]

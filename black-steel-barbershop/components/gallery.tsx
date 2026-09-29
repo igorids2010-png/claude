@@ -16,7 +16,7 @@ export function Gallery() {
           description="Cortes, barbas, o nosso espaço e um pouco dos bastidores."
         />
 
-        <ul className="mt-14 grid auto-rows-[220px] grid-cols-2 gap-3 sm:auto-rows-[260px] sm:gap-4 lg:grid-cols-4">
+        <ul className="mt-14 grid grid-flow-row-dense auto-rows-[220px] grid-cols-2 gap-3 sm:auto-rows-[260px] sm:gap-4 lg:grid-cols-4">
           {gallery.map((item, i) => (
             <Reveal
               as="li"

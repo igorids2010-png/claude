@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import { Menu } from "lucide-react"
 
 import { navLinks, whatsappUrl } from "@/lib/data"
@@ -12,6 +12,7 @@ import { Logo } from "./logo"
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false)
+  const reduce = useReducedMotion()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -24,7 +25,8 @@ export function Header() {
     <motion.header
       initial={{ y: -24, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      // entra logo depois que a porta de aço do hero sobe
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: reduce ? 0 : 1.2 }}
       className={cn(
         "fixed inset-x-0 top-0 z-40 border-b transition-[background-color,border-color,backdrop-filter] duration-500",
         scrolled ? "border-line bg-background/85 backdrop-blur-md" : "border-transparent bg-transparent",
