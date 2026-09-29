@@ -6,12 +6,12 @@ import { SectionHeading } from "./section-heading"
 
 export function Testimonials() {
   return (
-    <section aria-labelledby="depoimentos-title" className="py-24 sm:py-32">
+    <section aria-labelledby="testimonials-title" className="py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <SectionHeading
-          id="depoimentos-title"
-          eyebrow="Depoimentos"
-          title="Quem senta, volta"
+          id="testimonials-title"
+          eyebrow="Testimonials"
+          title="Sit once, come back"
           align="center"
         />
 
@@ -20,7 +20,7 @@ export function Testimonials() {
             <Reveal as="li" key={t.name} delay={i * 0.12}>
               <figure className="group flex h-full flex-col border border-line bg-surface p-8 transition-colors duration-500 hover:border-white/60">
                 <div className="flex items-center justify-between">
-                  <p className="flex gap-1" aria-label={`${t.rating} de 5 estrelas`}>
+                  <p className="flex gap-1" aria-label={`${t.rating} out of 5 stars`}>
                     {Array.from({ length: 5 }).map((_, s) => (
                       <Star
                         key={s}

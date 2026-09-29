@@ -15,7 +15,7 @@ export default function Home() {
   return (
     <>
       <Header />
-      <main id="conteudo">
+      <main id="content">
         <Hero />
         <Marquee />
         <Stats />

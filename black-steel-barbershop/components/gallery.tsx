@@ -7,13 +7,13 @@ import { SectionHeading } from "./section-heading"
 
 export function Gallery() {
   return (
-    <section id="galeria" aria-labelledby="galeria-title" className="border-t border-line bg-surface py-24 sm:py-32">
+    <section id="gallery" aria-labelledby="gallery-title" className="border-t border-line bg-surface py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <SectionHeading
-          id="galeria-title"
-          eyebrow="Galeria"
-          title="Feito à mão, cadeira a cadeira"
-          description="Cortes, barbas, o nosso espaço e um pouco dos bastidores."
+          id="gallery-title"
+          eyebrow="Gallery"
+          title="Handcrafted, chair by chair"
+          description="Cuts, shaves, our space and a look behind the scenes."
         />
 
         <ul className="mt-14 grid grid-flow-row-dense auto-rows-[220px] grid-cols-2 gap-3 sm:auto-rows-[260px] sm:gap-4 lg:grid-cols-4">

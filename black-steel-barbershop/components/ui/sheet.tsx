@@ -40,7 +40,7 @@ function SheetContent({
         {children}
         <SheetPrimitive.Close className="absolute top-6 right-5 p-2 text-muted transition-colors hover:text-white">
           <XIcon className="size-5" />
-          <span className="sr-only">Fechar menu</span>
+          <span className="sr-only">Close menu</span>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPrimitive.Portal>

@@ -40,7 +40,7 @@ export function Header() {
       >
         <Logo />
 
-        <nav aria-label="Principal" className="hidden lg:block">
+        <nav aria-label="Main" className="hidden lg:block">
           <ul className="flex items-center gap-10">
             {navLinks.map((link) => (
               <li key={link.href}>
@@ -62,20 +62,20 @@ export function Header() {
         <div className="flex items-center gap-3">
           <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
             <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-              Agendar horário
+              Book appointment
             </a>
           </Button>
 
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu">
+              <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open menu">
                 <Menu className="size-6!" />
               </Button>
             </SheetTrigger>
             <SheetContent>
               <SheetTitle className="text-xs tracking-[0.35em] text-muted uppercase">Menu</SheetTitle>
-              <SheetDescription className="sr-only">Navegação principal do site</SheetDescription>
-              <nav aria-label="Menu móvel" className="mt-10">
+              <SheetDescription className="sr-only">Main site navigation</SheetDescription>
+              <nav aria-label="Mobile menu" className="mt-10">
                 <ul className="flex flex-col">
                   {navLinks.map((link, i) => (
                     <li key={link.href} className="border-b border-line">
@@ -94,7 +94,7 @@ export function Header() {
               </nav>
               <Button asChild className="mt-auto w-full">
                 <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                  Agendar horário
+                  Book appointment
                 </a>
               </Button>
             </SheetContent>

@@ -14,7 +14,7 @@ export function Shutter() {
           <p className="font-display text-[19vw] leading-[0.85] font-bold uppercase tracking-tight text-transparent [-webkit-text-stroke:1px_rgba(255,255,255,0.28)] sm:text-[13vw]">
             Black Steel
           </p>
-          <p className="mt-4 text-[0.65rem] uppercase tracking-[0.6em] text-white/40 sm:text-xs">Barbershop · Desde 2017</p>
+          <p className="mt-4 text-[0.65rem] uppercase tracking-[0.6em] text-white/40 sm:text-xs">Barbershop · Since 2017</p>
         </div>
       </div>
 

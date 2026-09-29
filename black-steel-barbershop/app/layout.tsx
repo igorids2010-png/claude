@@ -7,13 +7,13 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "sw
 const oswald = Oswald({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-oswald", display: "swap" })
 
 export const metadata: Metadata = {
-  title: "Black Steel Barbershop | Barbearia premium em São Paulo",
+  title: "Black Steel Barbershop | Premium Barbershop",
   description:
-    "Cortes masculinos, barba na navalha e tratamentos capilares numa barbearia clássica com toque moderno. Agende seu horário pelo WhatsApp.",
+    "Men's haircuts, straight-razor shaves and hair treatments in a classic barbershop with a modern edge. Book your appointment on WhatsApp.",
   openGraph: {
     title: "Black Steel Barbershop",
-    description: "Estilo é atitude. Cuidado é essencial.",
-    locale: "pt_BR",
+    description: "Style is attitude. Care is essential.",
+    locale: "en_US",
     type: "website",
   },
 }
@@ -24,13 +24,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${oswald.variable}`}>
+    <html lang="en" className={`${inter.variable} ${oswald.variable}`}>
       <body>
         <a
-          href="#conteudo"
+          href="#content"
           className="fixed top-3 left-3 z-[60] -translate-y-24 bg-white px-4 py-3 font-display text-sm uppercase tracking-[0.2em] text-black transition-transform focus:translate-y-0"
         >
-          Pular para o conteúdo
+          Skip to content
         </a>
         {children}
       </body>

@@ -9,19 +9,19 @@ import { ServiceCard } from "./service-card"
 
 export function Services() {
   return (
-    <section id="servicos" aria-labelledby="servicos-title" className="py-24 sm:py-32">
+    <section id="services" aria-labelledby="services-title" className="py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <SectionHeading
-            id="servicos-title"
-            eyebrow="Serviços"
-            title="O ritual completo"
-            description="Cada serviço é executado com técnica, calma e produtos de primeira linha. Sem pressa, sem atalhos."
+            id="services-title"
+            eyebrow="Services"
+            title="The full ritual"
+            description="Every service is done with skill, patience and top-shelf products. No rush, no shortcuts."
           />
           <Reveal delay={0.2}>
             <Button asChild variant="outline">
               <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                Agendar agora
+                Book now
                 <ArrowRight />
               </a>
             </Button>

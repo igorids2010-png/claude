@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils"
 
 export function Logo({ className }: { className?: string }) {
   return (
-    <a href="#inicio" className={cn("group inline-flex items-center gap-3", className)} aria-label="Black Steel Barbershop, voltar ao início">
+    <a href="#home" className={cn("group inline-flex items-center gap-3", className)} aria-label="Black Steel Barbershop, back to top">
       <span
         aria-hidden
         className="grid size-9 place-items-center border border-white/70 font-display text-sm font-bold transition-colors duration-300 group-hover:bg-white group-hover:text-black"

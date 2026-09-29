@@ -20,17 +20,17 @@ export function FinalCta() {
         <Reveal>
           <p className="flex items-center justify-center gap-4 text-xs font-semibold uppercase tracking-[0.35em] text-neutral-600">
             <span aria-hidden className="h-px w-10 bg-black/30" />
-            Sua cadeira está pronta
+            Your chair is ready
             <span aria-hidden className="h-px w-10 bg-black/30" />
           </p>
           <h2
             id="cta-title"
             className="mt-6 font-display text-5xl font-bold uppercase leading-[0.9] tracking-tight text-balance sm:text-7xl lg:text-8xl"
           >
-            Agende seu horário
+            Book your appointment
           </h2>
           <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-neutral-600 sm:text-lg">
-            Fale com a gente pelo WhatsApp e garanta seu atendimento. Resposta rápida, sem espera na cadeira.
+            Message us on WhatsApp and lock in your spot. Quick replies, no waiting for the chair.
           </p>
         </Reveal>
 
@@ -38,7 +38,7 @@ export function FinalCta() {
           <Button asChild variant="dark" size="lg" className="w-full sm:w-auto">
             <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
               <WhatsAppIcon className="size-5!" />
-              Agendar pelo WhatsApp
+              Book on WhatsApp
               <ArrowRight />
             </a>
           </Button>
@@ -46,7 +46,7 @@ export function FinalCta() {
             href={`tel:+${site.whatsapp}`}
             className="font-display text-sm uppercase tracking-[0.2em] underline decoration-black/30 underline-offset-8 transition-colors hover:decoration-black"
           >
-            ou ligue {site.phone}
+            or call {site.phone}
           </a>
         </Reveal>
       </div>

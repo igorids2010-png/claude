@@ -7,7 +7,7 @@ import { Star } from "lucide-react"
 import { stats } from "@/lib/data"
 import { Reveal } from "./reveal"
 
-const formatter = new Intl.NumberFormat("pt-BR")
+const formatter = new Intl.NumberFormat("en-US")
 
 function Counter({ value }: { value: number }) {
   const ref = useRef<HTMLSpanElement>(null)
@@ -34,7 +34,7 @@ function Counter({ value }: { value: number }) {
 
 export function Stats() {
   return (
-    <section id="numeros" aria-label="Números da barbearia" className="border-y border-line bg-background">
+    <section id="numbers" aria-label="Barbershop in numbers" className="border-y border-line bg-background">
       <div className="mx-auto grid max-w-7xl grid-cols-1 sm:grid-cols-3">
         {stats.map((stat, i) => (
           <Reveal
@@ -48,7 +48,7 @@ export function Stats() {
               {stat.suffix}
             </p>
             {stat.stars && (
-              <p className="mt-3 flex justify-center gap-1" aria-label="5 de 5 estrelas">
+              <p className="mt-3 flex justify-center gap-1" aria-label="5 out of 5 stars">
                 {Array.from({ length: 5 }).map((_, s) => (
                   <Star key={s} aria-hidden className="size-4 fill-white text-white" />
                 ))}

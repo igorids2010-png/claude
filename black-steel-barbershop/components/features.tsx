@@ -13,12 +13,12 @@ const icons: Record<(typeof features)[number]["icon"], LucideIcon> = {
 
 export function Features() {
   return (
-    <section aria-labelledby="diferenciais-title" className="py-24 sm:py-32">
+    <section aria-labelledby="features-title" className="py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <SectionHeading
-          id="diferenciais-title"
-          eyebrow="Diferenciais"
-          title="Por que a Black Steel"
+          id="features-title"
+          eyebrow="Why us"
+          title="Why Black Steel"
           align="center"
         />
 

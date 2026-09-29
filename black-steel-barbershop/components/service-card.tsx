@@ -4,7 +4,7 @@ import { Clock } from "lucide-react"
 import type { Service } from "@/lib/data"
 import { cn } from "@/lib/utils"
 
-const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })
+const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
 
 type ServiceCardProps = {
   service: Service
@@ -23,7 +23,7 @@ export function ServiceCard({ service, index, className }: ServiceCardProps) {
       <div className="relative aspect-[4/3] overflow-hidden bg-surface-2">
         <Image
           src={service.image}
-          alt={`Serviço de ${service.name.toLowerCase()} na Black Steel`}
+          alt={`${service.name} service at Black Steel`}
           fill
           sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
           className="object-cover grayscale transition-[transform,filter] duration-700 ease-out group-hover:scale-110 group-hover:contrast-125"
@@ -34,7 +34,7 @@ export function ServiceCard({ service, index, className }: ServiceCardProps) {
         </span>
         {service.featured && (
           <span className="absolute top-4 right-4 bg-white px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.25em] text-black">
-            Mais pedido
+            Most popular
           </span>
         )}
       </div>
@@ -43,7 +43,7 @@ export function ServiceCard({ service, index, className }: ServiceCardProps) {
         <div className="flex items-start justify-between gap-4">
           <h3 className="font-display text-2xl font-bold uppercase tracking-wide">{service.name}</h3>
           <p className="shrink-0 font-display text-2xl font-bold">
-            <span className="sr-only">Preço: </span>
+            <span className="sr-only">Price: </span>
             {currency.format(service.price)}
           </p>
         </div>

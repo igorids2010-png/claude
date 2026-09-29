@@ -5,20 +5,20 @@ import { Reveal } from "./reveal"
 import { SectionHeading } from "./section-heading"
 
 const values = [
-  { title: "Tradição", text: "Técnicas clássicas de barbearia passadas de mão em mão." },
-  { title: "Precisão", text: "Cada linha, cada degradê, feito com atenção absoluta." },
-  { title: "Respeito", text: "Pelo seu tempo, pelo seu estilo e pela sua confiança." },
+  { title: "Tradition", text: "Classic barbering techniques passed down by hand." },
+  { title: "Precision", text: "Every line, every fade, done with absolute attention." },
+  { title: "Respect", text: "For your time, your style and your trust." },
 ]
 
 export function About() {
   return (
-    <section id="sobre" aria-labelledby="sobre-title" className="border-t border-line bg-surface py-24 sm:py-32">
+    <section id="about" aria-labelledby="about-title" className="border-t border-line bg-surface py-24 sm:py-32">
       <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 sm:px-8 lg:grid-cols-2 lg:gap-20">
         <Reveal direction="right" className="relative isolate">
           <div className="grain relative aspect-[4/5] overflow-hidden bg-surface-2">
             <Image
               src={images.about}
-              alt="Salão da Black Steel com parede de tijolos e cadeiras de couro preto enfileiradas"
+              alt="Black Steel shop floor with a brick wall and a row of black leather chairs"
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="object-cover grayscale contrast-110"
@@ -30,21 +30,21 @@ export function About() {
           />
           <div className="absolute -bottom-6 left-6 bg-white px-6 py-5 text-black sm:left-auto sm:-right-6 lg:-right-10">
             <p className="font-display text-4xl font-bold leading-none">2017</p>
-            <p className="mt-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em]">Desde</p>
+            <p className="mt-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em]">Since</p>
           </div>
         </Reveal>
 
         <div>
-          <SectionHeading id="sobre-title" eyebrow="Nossa história" title="Aço, couro e tradição" />
+          <SectionHeading id="about-title" eyebrow="Our story" title="Steel, leather and tradition" />
           <Reveal delay={0.1} className="mt-8 space-y-5 text-base leading-relaxed text-muted sm:text-lg">
             <p>
-              A Black Steel nasceu em 2017 da vontade de resgatar o ritual da barbearia clássica: a conversa sem pressa,
-              a toalha quente, o som da navalha. Tudo isso em um espaço de estética industrial, com o conforto e a
-              precisão que o homem moderno exige.
+              Black Steel was born in 2017 to bring back the ritual of the classic barbershop: the unhurried conversation,
+              the hot towel, the sound of the razor. All of it in an industrial-style space, with the comfort and
+              precision the modern man expects.
             </p>
             <p>
-              Hoje somos uma equipe de barbeiros apaixonados pelo ofício, que tratam cada cliente como único. Aqui, o
-              corte é só o começo da experiência.
+              Today we are a team of barbers who love the craft and treat every client as one of a kind. Here, the
+              haircut is only the beginning of the experience.
             </p>
           </Reveal>
 

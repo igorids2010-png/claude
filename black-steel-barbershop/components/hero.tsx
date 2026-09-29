@@ -18,7 +18,7 @@ import { images, site, whatsappUrl } from "@/lib/data"
 import { Button } from "@/components/ui/button"
 import { Shutter } from "./shutter"
 
-const headline = ["Estilo é atitude.", "Cuidado é essencial."]
+const headline = ["Style is attitude.", "Care is essential."]
 const ease = [0.22, 1, 0.36, 1] as const
 
 // Momento em que a porta de aço já subiu o suficiente para o texto aparecer.
@@ -60,7 +60,7 @@ export function Hero() {
   return (
     <section
       ref={ref}
-      id="inicio"
+      id="home"
       aria-labelledby="hero-title"
       onPointerMove={handlePointerMove}
       onPointerLeave={() => glow.set(0)}
@@ -123,7 +123,7 @@ export function Hero() {
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-white/70" />
               <span className="relative inline-flex size-2 rounded-full bg-white" />
             </span>
-            Barbearia clássica · Desde 2017
+            Classic barbershop · Since 2017
           </motion.p>
 
           <h1
@@ -159,8 +159,8 @@ export function Hero() {
             animate="show"
             className="mt-8 max-w-xl text-base leading-relaxed text-neutral-200 sm:text-lg"
           >
-            Cadeiras de couro, navalha afiada e toalha quente. Uma barbearia clássica com atitude moderna, feita para o
-            homem que valoriza cada detalhe.
+            Leather chairs, sharp razors and hot towels. A classic barbershop with a modern attitude, made for the
+            man who values every detail.
           </motion.p>
 
           <motion.div
@@ -172,12 +172,12 @@ export function Hero() {
           >
             <Button asChild size="lg">
               <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                Agendar horário
+                Book appointment
                 <ArrowRight />
               </a>
             </Button>
             <Button asChild size="lg" variant="outline" className="bg-black/20 backdrop-blur-sm">
-              <a href="#servicos">Ver serviços</a>
+              <a href="#services">View services</a>
             </Button>
           </motion.div>
         </div>
@@ -194,7 +194,7 @@ export function Hero() {
           <ul className="flex items-center text-xs uppercase tracking-[0.22em] text-neutral-300">
             <li className="flex items-center gap-3 pr-8">
               <Clock aria-hidden className="size-4 text-white" />
-              Ter–Sex 09h–20h · Sáb 08h–18h
+              Tue–Fri 9am–8pm · Sat 8am–6pm
             </li>
             <li className="flex items-center gap-3 border-l border-white/15 px-8">
               <MapPin aria-hidden className="size-4 text-white" />
@@ -202,16 +202,16 @@ export function Hero() {
             </li>
             <li className="hidden items-center gap-3 border-l border-white/15 pl-8 xl:flex">
               <Star aria-hidden className="size-4 fill-white text-white" />
-              5,0 · avaliação dos clientes
+              5.0 · client rating
             </li>
           </ul>
 
           <a
-            href="#numeros"
-            aria-label="Rolar para a próxima seção"
+            href="#numbers"
+            aria-label="Scroll to the next section"
             className="flex items-center gap-3 text-[0.65rem] uppercase tracking-[0.4em] text-neutral-400 transition-colors hover:text-white"
           >
-            Role
+            Scroll
             <span className="flex h-9 w-5 justify-center rounded-full border border-white/40 pt-1.5">
               <span className="block size-1 animate-scroll-dot rounded-full bg-white" />
             </span>
