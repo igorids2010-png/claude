@@ -19,7 +19,7 @@ npm run dev      # http://localhost:3000
 npm run build    # build de produção
 ```
 
-Na Vercel, configure **Root Directory = `black-steel-barbershop`**.
+Na Vercel, configure **Root Directory = `black-steel-barbershop`**. Publicado em https://black-steel-barbershop.vercel.app (projeto `black-steel-barbershop`, sem deploy automático: o repositório tem outro app na raiz).
 
 ## Estrutura
 
@@ -30,7 +30,9 @@ app/
   globals.css       tokens de cor, fontes, foco visível, reduced-motion
 components/
   header.tsx        fixo; transparente no topo e sólido ao rolar; menu mobile em Sheet
-  hero.tsx          imagem full-screen P&B, headline animada, CTAs, indicador de scroll
+  hero.tsx          salão vazio em P&B, zoom lento, luz que segue o mouse, headline animada, CTAs, barra de informações
+  shutter.tsx       porta de aço que sobe ao carregar a página (só CSS)
+  marquee.tsx       faixa branca com os serviços passando
   stats.tsx         números com contador animado
   services.tsx      grid de serviços
   service-card.tsx  card com zoom na imagem e borda que acende no hover
