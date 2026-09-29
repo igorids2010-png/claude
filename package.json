@@ -2,7 +2,7 @@
   "name": "radar-sem-site",
   "version": "2.0.0",
   "private": true,
-  "description": "Encontra no Google Maps empresas de uma cidade e nicho que ainda não têm site.",
+  "description": "Encontra empresas sem site por cidade e nicho e organiza os leads já contatados.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

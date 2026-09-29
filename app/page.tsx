@@ -2,43 +2,70 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { Empresa, Fonte, SearchEvent } from "@/lib/types"
-import { CAPITAIS, CIDADES_GRANDES, NICHOS } from "@/lib/sugestoes"
-import { Combobox } from "@/components/combobox"
+import { useMeusLeads } from "@/lib/leads"
+import { SearchForm } from "@/components/search-form"
 import { ScanProgress } from "@/components/scan-progress"
 import { Results } from "@/components/results"
+import { MyLeads } from "@/components/my-leads"
+
+type Aba = "buscar" | "leads"
 
 type Etapa =
   | { tipo: "form" }
-  | { tipo: "carregando"; percent: number; message: string; encontradas: number }
+  | {
+      tipo: "carregando"
+      percent: number
+      message: string
+      encontradas: number
+      analisadas: number
+      regioesProntas: number
+      regioesTotal: number
+    }
   | {
       tipo: "resultado"
       fonte: Fonte
       cidade: string
-      nicho: string
+      nichos: string[]
+      quantidade: number
       analisadas: number
       empresas: Empresa[]
-      regioesSemResposta?: number
+      regioesSemResposta: number
     }
   | { tipo: "erro"; message: string }
 
-const GRUPOS_CIDADES = [
-  { titulo: "Capitais", itens: CAPITAIS },
-  { titulo: "Outras cidades grandes", itens: CIDADES_GRANDES },
-]
-const GRUPOS_NICHOS = [{ titulo: "Nichos populares", itens: NICHOS }]
-
-const PASSOS = [
-  { titulo: "Escolha cidade e nicho", texto: "Qualquer cidade do Brasil, qualquer tipo de negócio." },
-  { titulo: "O radar varre o mapa", texto: "A cidade é dividida em regiões para trazer o máximo de empresas." },
-  { titulo: "Copie quem não tem site", texto: "Telefone, endereço e link prontos para você entrar em contato." },
-]
+const CARREGANDO_INICIAL: Etapa = {
+  tipo: "carregando",
+  percent: 0,
+  message: "Preparando a busca…",
+  encontradas: 0,
+  analisadas: 0,
+  regioesProntas: 0,
+  regioesTotal: 9,
+}
 
 export default function Home() {
+  const [aba, setAba] = useState<Aba>("buscar")
   const [cidade, setCidade] = useState("")
-  const [nicho, setNicho] = useState("")
+  const [nichos, setNichos] = useState<string[]>([])
+  const [quantidade, setQuantidade] = useState(50)
   const [etapa, setEtapa] = useState<Etapa>({ tipo: "form" })
   const [aviso, setAviso] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const { leads, ids, adicionar, atualizar, remover } = useMeusLeads()
+
+  // mantém a aba no endereço (#meus-leads) para o botão voltar e para favoritos
+  useEffect(() => {
+    const sincronizar = () => setAba(window.location.hash === "#meus-leads" ? "leads" : "buscar")
+    sincronizar()
+    window.addEventListener("hashchange", sincronizar)
+    return () => window.removeEventListener("hashchange", sincronizar)
+  }, [])
+
+  const irPara = (nova: Aba) => {
+    window.location.hash = nova === "leads" ? "meus-leads" : ""
+    setAba(nova)
+    window.scrollTo({ top: 0 })
+  }
 
   useEffect(() => {
     if (!aviso) return
@@ -55,19 +82,28 @@ export default function Home() {
     }
   }, [])
 
-  const procurar = async () => {
-    const c = cidade.trim()
-    const n = nicho.trim()
-    if (!c || !n) return
+  const marcarContatado = useCallback(
+    (empresa: Empresa) => {
+      adicionar(empresa, etapa.tipo === "resultado" ? etapa.cidade : cidade)
+      setAviso("Salvo em Meus leads!")
+    },
+    [adicionar, etapa, cidade],
+  )
 
+  const procurar = async () => {
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
-    setEtapa({ tipo: "carregando", percent: 0, message: "Ligando o radar…", encontradas: 0 })
+    setEtapa(CARREGANDO_INICIAL)
+    window.scrollTo({ top: 0 })
 
     try {
-      const params = new URLSearchParams({ cidade: c, nicho: n })
-      const response = await fetch(`/api/search?${params}`, { signal: controller.signal })
+      const response = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cidade: cidade.trim(), nichos, quantidade, excluir: [...ids] }),
+        signal: controller.signal,
+      })
       if (!response.body) throw new Error("O servidor não respondeu.")
 
       const reader = response.body.getReader()
@@ -86,9 +122,11 @@ export default function Home() {
           if (!linha.trim()) continue
           const evento = JSON.parse(linha) as SearchEvent
           if (evento.type === "progress") {
-            setEtapa({ tipo: "carregando", percent: evento.percent, message: evento.message, encontradas: evento.encontradas })
+            const { type: _, ...dados } = evento
+            setEtapa({ tipo: "carregando", ...dados })
           } else if (evento.type === "result") {
-            setEtapa({ tipo: "resultado", ...evento })
+            const { type: _, ...dados } = evento
+            setEtapa({ tipo: "resultado", ...dados })
             terminou = true
           } else if (evento.type === "error") {
             setEtapa({ tipo: "erro", message: evento.message })
@@ -113,179 +151,157 @@ export default function Home() {
     setEtapa({ tipo: "form" })
   }
 
-  const compacto = etapa.tipo !== "form"
-
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[920px] flex-col px-4 pb-20 pt-10 sm:px-6 sm:pt-16">
-      <header className={`flex flex-col ${compacto ? "mb-8 items-start" : "mb-10 items-center text-center sm:mb-12"}`}>
-        {compacto ? (
-          <button
-            type="button"
-            onClick={cancelar}
-            className="flex items-center gap-3 rounded-full pr-3 text-left"
-            aria-label="Voltar ao início"
-          >
-            <RadarMark small />
-            <span className="font-display text-2xl font-bold tracking-tight">
-              Radar <span className="text-signal">Sem Site</span>
+    <>
+      <header className="sticky top-0 z-40 border-b border-line/70 bg-ink/95 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 w-full max-w-[960px] items-center justify-between gap-3 px-4 sm:px-6">
+          <button type="button" onClick={() => irPara("buscar")} className="flex items-center gap-2.5" aria-label="Início">
+            <Marca />
+            <span className="hidden font-display text-lg font-bold tracking-tight sm:inline">
+              Radar <span className="text-accent-soft">Sem Site</span>
             </span>
           </button>
-        ) : (
-          <>
-            <RadarMark />
-            <h1 className="mt-6 font-display text-[clamp(3.2rem,11vw,6.5rem)] font-extrabold leading-[0.92] tracking-[-0.035em]">
-              Radar <span className="text-signal">Sem Site</span>
-            </h1>
-            <p className="mt-5 max-w-md text-lg text-muted text-balance">
-              Encontre empresas da sua cidade que ainda não têm site.
-            </p>
-          </>
-        )}
+          <nav className="flex rounded-2xl border border-line bg-panel p-1" aria-label="Menu principal">
+            <AbaBotao ativa={aba === "buscar"} onClick={() => irPara("buscar")}>
+              Buscar leads
+            </AbaBotao>
+            <AbaBotao ativa={aba === "leads"} onClick={() => irPara("leads")}>
+              Meus leads
+              {leads.length > 0 && (
+                <span
+                  className={`ml-1.5 rounded-full px-1.5 font-mono text-[0.7rem] tabular-nums ${
+                    aba === "leads" ? "bg-white/20" : "bg-accent/20 text-accent-soft"
+                  }`}
+                >
+                  {leads.length}
+                </span>
+              )}
+            </AbaBotao>
+          </nav>
+        </div>
       </header>
 
-      {etapa.tipo === "form" && (
-        <div className="animate-rise flex flex-col gap-10">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              procurar()
-            }}
-            className="flex flex-col gap-5 rounded-[28px] border border-line bg-panel/80 p-5 shadow-2xl shadow-black/30 backdrop-blur sm:p-7"
-          >
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Combobox
-                label="Cidade"
-                placeholder="Digite ou escolha a cidade"
-                value={cidade}
-                onChange={setCidade}
-                grupos={GRUPOS_CIDADES}
-                icon={<PinGlyph />}
-              />
-              <Combobox
-                label="Nicho"
-                placeholder="Ex: lanchonetes, dentistas…"
-                value={nicho}
-                onChange={setNicho}
-                grupos={GRUPOS_NICHOS}
-                icon={<ShopGlyph />}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={!cidade.trim() || !nicho.trim()}
-              className="h-14 rounded-2xl bg-signal text-base font-bold text-[#1a0d05] shadow-[0_10px_30px_-10px_rgb(255_122_69/0.7)] transition hover:brightness-110 active:translate-y-px disabled:cursor-not-allowed disabled:bg-panel-2 disabled:text-dim disabled:shadow-none"
-            >
-              Procurar empresas
-            </button>
-          </form>
-
-          <ol className="grid gap-3 sm:grid-cols-3">
-            {PASSOS.map((passo, i) => (
-              <li key={passo.titulo} className="flex gap-3 rounded-2xl border border-line/70 p-4">
-                <span className="font-mono text-sm font-semibold text-signal">{i + 1}</span>
-                <div>
-                  <p className="text-sm font-semibold">{passo.titulo}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted">{passo.texto}</p>
+      <main className="mx-auto flex w-full max-w-[960px] flex-col px-4 pb-24 pt-8 sm:px-6 sm:pt-12">
+        {aba === "leads" ? (
+          <MyLeads
+            leads={leads}
+            onAtualizar={atualizar}
+            onRemover={remover}
+            onCopy={copiar}
+            onIrParaBusca={() => irPara("buscar")}
+          />
+        ) : (
+          <>
+            {etapa.tipo === "form" && (
+              <div className="animate-rise flex flex-col gap-8">
+                <div className="flex flex-col items-center gap-4 pt-2 text-center sm:pt-6">
+                  <h1 className="font-display text-[clamp(3rem,10.5vw,6.2rem)] font-extrabold leading-[0.92] tracking-[-0.035em]">
+                    Radar <span className="bg-gradient-to-r from-accent to-accent-soft bg-clip-text text-transparent">Sem Site</span>
+                  </h1>
+                  <p className="max-w-md text-lg text-muted text-balance">
+                    Encontre empresas da sua cidade que ainda não têm site — prontas para você oferecer um.
+                  </p>
                 </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
+                <SearchForm
+                  cidade={cidade}
+                  nichos={nichos}
+                  quantidade={quantidade}
+                  onCidade={setCidade}
+                  onNichos={setNichos}
+                  onQuantidade={setQuantidade}
+                  onSubmit={procurar}
+                />
+              </div>
+            )}
 
-      {etapa.tipo === "carregando" && (
-        <ScanProgress
-          percent={etapa.percent}
-          message={etapa.message}
-          encontradas={etapa.encontradas}
-          cidade={cidade}
-          nicho={nicho}
-          onCancel={cancelar}
-        />
-      )}
+            {etapa.tipo === "carregando" && (
+              <ScanProgress
+                {...etapa}
+                quantidade={quantidade}
+                cidade={cidade}
+                nichos={nichos}
+                onCancel={cancelar}
+              />
+            )}
 
-      {etapa.tipo === "resultado" && (
-        <Results
-          fonte={etapa.fonte}
-          regioesSemResposta={etapa.regioesSemResposta ?? 0}
-          cidade={etapa.cidade}
-          nicho={etapa.nicho}
-          analisadas={etapa.analisadas}
-          empresas={etapa.empresas}
-          onNewSearch={() => setEtapa({ tipo: "form" })}
-          onCopy={copiar}
-        />
-      )}
+            {etapa.tipo === "resultado" && (
+              <Results
+                {...etapa}
+                idsSalvos={ids}
+                onNewSearch={() => setEtapa({ tipo: "form" })}
+                onCopy={copiar}
+                onMarcarContatado={marcarContatado}
+              />
+            )}
 
-      {etapa.tipo === "erro" && (
-        <section
-          role="alert"
-          className="animate-rise mx-auto flex max-w-lg flex-col items-center gap-4 rounded-[28px] border border-danger/40 bg-panel px-6 py-10 text-center"
-        >
-          <p className="font-display text-2xl font-semibold">A busca não deu certo</p>
-          <p className="text-sm leading-relaxed text-muted">{etapa.message}</p>
-          <div className="mt-2 flex gap-2">
-            <button
-              type="button"
-              onClick={procurar}
-              className="rounded-xl bg-signal px-5 py-2.5 text-sm font-bold text-[#1a0d05] hover:brightness-110"
-            >
-              Tentar de novo
-            </button>
-            <button
-              type="button"
-              onClick={() => setEtapa({ tipo: "form" })}
-              className="rounded-xl border border-line px-5 py-2.5 text-sm font-semibold text-muted hover:text-fg"
-            >
-              Voltar
-            </button>
-          </div>
-        </section>
-      )}
+            {etapa.tipo === "erro" && (
+              <section
+                role="alert"
+                className="animate-rise mx-auto flex max-w-lg flex-col items-center gap-4 rounded-[28px] border border-danger/40 bg-panel px-6 py-10 text-center"
+              >
+                <p className="font-display text-2xl font-semibold">A busca não deu certo</p>
+                <p className="text-sm leading-relaxed text-muted">{etapa.message}</p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={procurar}
+                    className="rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-white hover:brightness-110"
+                  >
+                    Tentar de novo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEtapa({ tipo: "form" })}
+                    className="rounded-xl border border-line px-5 py-2.5 text-sm font-semibold text-muted hover:text-fg"
+                  >
+                    Voltar
+                  </button>
+                </div>
+              </section>
+            )}
+          </>
+        )}
+      </main>
 
       <div
         aria-live="polite"
-        className={`fixed inset-x-0 bottom-6 z-50 mx-auto w-fit rounded-full border border-line bg-panel-2 px-5 py-3 text-sm font-semibold shadow-2xl shadow-black/60 transition duration-300 ${
+        className={`fixed inset-x-0 bottom-6 z-50 mx-auto w-fit rounded-full border border-line bg-panel-2 px-5 py-3 text-sm font-semibold shadow-2xl shadow-black/70 transition duration-300 ${
           aviso ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
         }`}
       >
         <span className="mr-2 text-ok">✓</span>
         {aviso}
       </div>
-    </main>
+    </>
   )
 }
 
-function RadarMark({ small = false }: { small?: boolean }) {
+function AbaBotao({ ativa, onClick, children }: { ativa: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={ativa ? "page" : undefined}
+      className={`flex items-center rounded-xl px-3.5 py-2 text-sm font-semibold transition sm:px-4 ${
+        ativa ? "bg-accent text-white shadow-[0_0_20px_-6px_rgb(47_124_255/0.9)]" : "text-muted hover:text-fg"
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function Marca() {
   return (
     <span
       aria-hidden
-      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-panel ${
-        small ? "size-10" : "size-16"
-      }`}
+      className="relative grid size-9 shrink-0 place-items-center rounded-xl border border-accent/40 bg-accent/10 shadow-[0_0_20px_-8px_rgb(47_124_255/0.9)]"
     >
-      <span className="absolute inset-[22%] rounded-full border border-signal/35" />
-      <span className="animate-sweep absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,rgb(255_122_69/0.45),transparent_30%)]" />
-      <span className="relative size-1.5 rounded-full bg-signal shadow-[0_0_0_4px_rgb(255_122_69/0.18)]" />
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8cb8ff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="m16 16 4.5 4.5" />
+        <circle cx="11" cy="11" r="1.6" fill="#2f7cff" stroke="none" />
+      </svg>
     </span>
-  )
-}
-
-function PinGlyph() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" />
-      <circle cx="12" cy="10" r="3" />
-    </svg>
-  )
-}
-
-function ShopGlyph() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9 4.5 4h15L21 9" />
-      <path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9Z" />
-      <path d="M5 13v7h14v-7" />
-    </svg>
   )
 }

@@ -1,4 +1,5 @@
 import type { Empresa } from "@/lib/types"
+import type { LeadSalvo } from "@/lib/leads"
 
 export function soDigitos(telefone: string) {
   return telefone.replace(/\D/g, "")
@@ -18,10 +19,10 @@ export function textoAvaliacao(e: Empresa) {
   return `${e.avaliacao.toFixed(1).replace(".", ",")} (${e.totalAvaliacoes ?? 0} avaliações)`
 }
 
-export function textoEmpresa(e: Empresa, nicho: string) {
+export function textoEmpresa(e: Empresa) {
   return [
     `Empresa: ${e.nome}`,
-    `Nicho: ${nicho}`,
+    `Nicho: ${e.nicho}`,
     `Telefone: ${e.telefone ?? "Não informado"}`,
     `Endereço: ${e.endereco || "Não informado"}`,
     e.avaliacao != null ? `Avaliação: ${textoAvaliacao(e)}` : null,
@@ -32,8 +33,8 @@ export function textoEmpresa(e: Empresa, nicho: string) {
     .join("\n")
 }
 
-export function textoTodas(empresas: Empresa[], nicho: string) {
-  return empresas.map((e) => textoEmpresa(e, nicho)).join("\n\n---\n\n")
+export function textoTodas(empresas: Empresa[]) {
+  return empresas.map(textoEmpresa).join("\n\n---\n\n")
 }
 
 function celulaCsv(valor: string | number | null) {
@@ -41,17 +42,64 @@ function celulaCsv(valor: string | number | null) {
   return /[";\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto
 }
 
-// Separador ";" abre direto nas colunas certas no Excel em português.
-export function gerarCsv(empresas: Empresa[], nicho: string) {
-  const cabecalho = ["Empresa", "Nicho", "Telefone", "WhatsApp", "Endereço", "Nota", "Avaliações", "Rede social", "Google Maps"]
-  const linhas = empresas.map((e) =>
-    [e.nome, nicho, e.telefone, linkWhatsApp(e.telefone), e.endereco, e.avaliacao, e.totalAvaliacoes, e.redeSocial, e.linkMaps]
-      .map(celulaCsv)
-      .join(";"),
+// Separador ";" e BOM: abre direto nas colunas certas no Excel em português.
+function montarCsv(cabecalho: string[], linhas: (string | number | null)[][]) {
+  return "﻿" + [cabecalho.join(";"), ...linhas.map((l) => l.map(celulaCsv).join(";"))].join("\n")
+}
+
+export function gerarCsv(empresas: Empresa[]) {
+  return montarCsv(
+    ["Empresa", "Nicho", "Telefone", "WhatsApp", "Endereço", "Nota", "Avaliações", "Rede social", "Google Maps"],
+    empresas.map((e) => [
+      e.nome,
+      e.nicho,
+      e.telefone,
+      linkWhatsApp(e.telefone),
+      e.endereco,
+      e.avaliacao,
+      e.totalAvaliacoes,
+      e.redeSocial,
+      e.linkMaps,
+    ]),
   )
-  return "﻿" + [cabecalho.join(";"), ...linhas].join("\n")
+}
+
+export function gerarCsvLeads(leads: LeadSalvo[], rotuloStatus: (s: LeadSalvo["status"]) => string) {
+  return montarCsv(
+    ["Empresa", "Nicho", "Cidade", "Status", "Contatado em", "Observação", "Telefone", "WhatsApp", "Endereço", "Google Maps"],
+    leads.map((l) => [
+      l.nome,
+      l.nicho,
+      l.cidade,
+      rotuloStatus(l.status),
+      formatarData(l.contatadoEm),
+      l.observacao,
+      l.telefone,
+      linkWhatsApp(l.telefone),
+      l.endereco,
+      l.linkMaps,
+    ]),
+  )
+}
+
+export function formatarData(iso: string) {
+  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+}
+
+export function baixarArquivo(conteudo: string, nome: string) {
+  const blob = new Blob([conteudo], { type: "text/csv;charset=utf-8" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = nome
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 export function normalizar(texto: string) {
   return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
+}
+
+export function slug(texto: string) {
+  return normalizar(texto).replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
 }

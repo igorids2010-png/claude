@@ -1,5 +1,15 @@
-import { GRID_SIZE, SearchError, socialOnlyLink, type Emit, type Empresa } from "@/lib/types"
-import { normalizar } from "@/lib/format"
+import { resolverNicho } from "@/lib/nichos"
+import {
+  GRID_SIZE,
+  SearchError,
+  ColetaLeads,
+  calcularPercent,
+  equilibrarPorNicho,
+  socialOnlyLink,
+  type Emit,
+  type Empresa,
+  type PedidoBusca,
+} from "@/lib/types"
 
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 // Servidores públicos do Overpass: cada região vai para um, e se ele falhar tenta o próximo.
@@ -29,58 +39,10 @@ function descreverFalha(err: unknown) {
 type Bbox = { s: number; w: number; n: number; e: number }
 
 type OsmElement = {
-  type: "node" | "way" | "relation"
+  // "nicho" é o marcador que a consulta coloca antes dos resultados de cada nicho
+  type: "node" | "way" | "relation" | "nicho"
   id: number
   tags?: Record<string, string>
-}
-
-// Cada nicho vira um ou mais filtros de tags do OpenStreetMap. A ordem importa:
-// os mais específicos (pizzaria, clínica veterinária) vêm antes dos genéricos.
-const NICHOS_OSM: { palavras: string[]; filtros: string[] }[] = [
-  { palavras: ["pizza"], filtros: ['["amenity"~"^(restaurant|fast_food)$"]["cuisine"~"pizza"]'] },
-  { palavras: ["hamburg", "burger"], filtros: ['["amenity"~"^(restaurant|fast_food)$"]["cuisine"~"burger"]'] },
-  { palavras: ["lanchonete", "lanche", "fast food", "pastel"], filtros: ['["amenity"="fast_food"]', '["amenity"="cafe"]'] },
-  { palavras: ["restaurante"], filtros: ['["amenity"="restaurant"]'] },
-  { palavras: ["barbear", "barber"], filtros: ['["shop"="hairdresser"]["hairdresser"="barber"]', '["shop"="hairdresser"]["name"~"barb",i]'] },
-  { palavras: ["bar", "boteco", "pub"], filtros: ['["amenity"~"^(bar|pub|biergarten)$"]'] },
-  { palavras: ["padaria", "panificadora"], filtros: ['["shop"~"^(bakery|pastry|confectionery)$"]'] },
-  { palavras: ["acougue"], filtros: ['["shop"="butcher"]'] },
-  { palavras: ["mercado", "mercearia", "hortifruti", "sacolao"], filtros: ['["shop"~"^(supermarket|convenience|greengrocer|general)$"]'] },
-  { palavras: ["odonto", "dentist"], filtros: ['["amenity"="dentist"]', '["healthcare"="dentist"]'] },
-  { palavras: ["veterinari"], filtros: ['["amenity"="veterinary"]'] },
-  { palavras: ["clinica", "medic", "consultorio"], filtros: ['["amenity"~"^(clinic|doctors)$"]', '["healthcare"~"^(clinic|doctor)$"]'] },
-  { palavras: ["petshop", "pet shop", "pet"], filtros: ['["shop"="pet"]', '["shop"="pet_grooming"]'] },
-  { palavras: ["salao", "saloes", "cabeleire", "cabelo"], filtros: ['["shop"~"^(hairdresser|beauty)$"]'] },
-  { palavras: ["estetica", "manicure", "unha", "sobrancelha"], filtros: ['["shop"~"^(beauty|cosmetics)$"]'] },
-  { palavras: ["academia", "crossfit", "pilates"], filtros: ['["leisure"~"^(fitness_centre|sports_centre)$"]'] },
-  { palavras: ["lava-rapido", "lava rapido", "lava jato", "lava-jato", "lavagem"], filtros: ['["amenity"="car_wash"]'] },
-  { palavras: ["oficina", "mecanic", "funilaria"], filtros: ['["shop"~"^(car_repair|tyres)$"]'] },
-  { palavras: ["autopec", "auto pec"], filtros: ['["shop"="car_parts"]'] },
-  { palavras: ["farmacia", "drogaria"], filtros: ['["amenity"="pharmacy"]', '["shop"="chemist"]'] },
-  { palavras: ["otica"], filtros: ['["shop"="optician"]'] },
-  { palavras: ["roupa", "moda", "boutique", "vestuario"], filtros: ['["shop"~"^(clothes|boutique|fashion)$"]'] },
-  { palavras: ["construcao", "ferragem", "ferragens"], filtros: ['["shop"~"^(hardware|doityourself|building_materials|trade)$"]'] },
-  { palavras: ["imobiliaria", "imoveis"], filtros: ['["office"="estate_agent"]', '["shop"="estate_agent"]'] },
-  { palavras: ["contab", "contador"], filtros: ['["office"~"^(accountant|tax_advisor)$"]'] },
-  { palavras: ["advoca", "advogad"], filtros: ['["office"="lawyer"]'] },
-  { palavras: ["idioma", "ingles", "espanhol"], filtros: ['["amenity"="language_school"]'] },
-  { palavras: ["florista", "floricultura", "flores"], filtros: ['["shop"="florist"]'] },
-  { palavras: ["celular", "assistencia tecnica", "eletronic"], filtros: ['["shop"~"^(mobile_phone|electronics|computer)$"]', '["craft"="electronics_repair"]'] },
-]
-
-// Caracteres especiais viram "." (qualquer caractere) para não quebrar a consulta.
-function termoDeBusca(texto: string) {
-  return texto.trim().replace(/[\\^$.*+?()[\]{}|"']/g, ".")
-}
-
-// Nicho fora da lista: procura estabelecimentos cujo nome contenha o texto digitado.
-function filtrosDoNicho(nicho: string): string[] {
-  const alvo = normalizar(nicho)
-  const conhecido = NICHOS_OSM.find((n) => n.palavras.some((p) => alvo.includes(p)))
-  if (conhecido) return conhecido.filtros
-
-  const termo = termoDeBusca(nicho)
-  return ["shop", "amenity", "office", "craft", "leisure"].map((chave) => `["${chave}"]["name"~"${termo}",i]`)
 }
 
 async function localizarCidade(cidade: string, signal?: AbortSignal) {
@@ -181,12 +143,19 @@ async function consultarOverpass(
   return { ok: false, motivo: motivos.join(", ") }
 }
 
-function montarQuery(filtros: string[], regiao: Bbox, areaId: number | null) {
+// Uma consulta por região com todos os nichos. Antes dos resultados de cada nicho sai um
+// marcador `nicho` (criado com `make`), para saber de qual nicho cada empresa veio.
+function montarQuery(filtrosPorNicho: string[][], regiao: Bbox, areaId: number | null) {
   const caixa = `(${regiao.s},${regiao.w},${regiao.n},${regiao.e})`
   const area = areaId ? "(area.a)" : ""
-  const seletores = filtros.map((f) => `nwr${f}["name"]${area}${caixa};`).join("")
   const timeout = Math.round(TIMEOUT_CONSULTA_MS / 1000)
-  return `[out:json][timeout:${timeout}];${areaId ? `area(id:${areaId})->.a;` : ""}(${seletores});out tags;`
+
+  const conjuntos = filtrosPorNicho
+    .map((filtros, i) => `(${filtros.map((f) => `nwr${f}["name"]${area}${caixa};`).join("")})->.n${i};`)
+    .join("")
+  const saidas = filtrosPorNicho.map((_, i) => `make nicho i="${i}";out;.n${i} out tags;`).join("")
+
+  return `[out:json][timeout:${timeout}];${areaId ? `area(id:${areaId})->.a;` : ""}${conjuntos}${saidas}`
 }
 
 function formatarTelefone(bruto: string): string {
@@ -207,7 +176,7 @@ function linkRede(valor: string, base: string) {
   return `${base}${v.replace(/^@/, "").replace(/^\/+/, "")}`
 }
 
-function toEmpresa(el: OsmElement, cidade: string): Empresa | null {
+function toEmpresa(el: OsmElement, cidade: string, nicho: string): Empresa | null {
   const t = el.tags ?? {}
   if (!t.name) return null
   if (t.disused === "yes" || t["disused:shop"] || t["abandoned"] === "yes") return null
@@ -231,8 +200,9 @@ function toEmpresa(el: OsmElement, cidade: string): Empresa | null {
   const endereco = [rua, t["addr:suburb"] ?? t["addr:neighbourhood"], t["addr:city"]].filter(Boolean).join(" - ")
 
   return {
-    id: `${el.type}/${el.id}`,
+    id: `osm:${el.type}/${el.id}`,
     nome: t.name,
+    nicho,
     telefone: telefone ? formatarTelefone(telefone) : null,
     endereco,
     avaliacao: null,
@@ -242,74 +212,108 @@ function toEmpresa(el: OsmElement, cidade: string): Empresa | null {
   }
 }
 
-export async function searchOsm(
-  { cidade, nicho }: { cidade: string; nicho: string },
-  emit: Emit,
-  signal?: AbortSignal,
-  prazoMs = PRAZO_TOTAL_MS,
-) {
+export async function searchOsm(pedido: PedidoBusca, emit: Emit, signal?: AbortSignal, prazoMs = PRAZO_TOTAL_MS) {
+  const { cidade, nichos, quantidade } = pedido
   const prazoFinal = Date.now() + prazoMs
 
-  emit({ type: "progress", percent: 3, message: `Localizando ${cidade} no mapa…`, encontradas: 0 })
-  const lugar = await localizarCidade(cidade, signal)
-
-  const filtros = filtrosDoNicho(nicho)
-  const regioes = dividirBbox(lugar.bbox, GRID_SIZE)
-  const encontrados = new Map<string, OsmElement>()
-  const falhas: string[] = []
-  let concluidas = 0
-
-  const reportar = () =>
+  const regioesTotal = GRID_SIZE * GRID_SIZE
+  const progresso = (message: string, regioesProntas: number, encontradas: number, analisadas: number) =>
     emit({
       type: "progress",
-      percent: Math.round(8 + (concluidas / regioes.length) * 87),
-      message:
-        concluidas < regioes.length
-          ? `Varrendo o mapa: ${concluidas} de ${regioes.length} regiões prontas…`
-          : "Todas as regiões varridas.",
-      encontradas: encontrados.size,
+      percent: calcularPercent(regioesProntas, regioesTotal, encontradas, quantidade),
+      message,
+      encontradas,
+      analisadas,
+      regioesProntas,
+      regioesTotal,
     })
 
-  emit({ type: "progress", percent: 8, message: `Dividindo ${lugar.nome} em ${regioes.length} regiões…`, encontradas: 0 })
+  emit({
+    type: "progress",
+    percent: 3,
+    message: `Localizando ${cidade} no mapa…`,
+    encontradas: 0,
+    analisadas: 0,
+    regioesProntas: 0,
+    regioesTotal,
+  })
+  const lugar = await localizarCidade(cidade, signal)
+
+  const filtrosPorNicho = nichos.map((nome) => resolverNicho(nome).osm)
+  const regioes = dividirBbox(lugar.bbox, GRID_SIZE)
+  const vistos = new Set<string>()
+  const coleta = new ColetaLeads(nichos, quantidade, new Set(pedido.excluir))
+  const falhas: string[] = []
+  let prontas = 0
+
+  progresso(`Dividindo ${lugar.nome} em ${regioesTotal} regiões…`, 0, 0, 0)
+
+  const processar = (elementos: OsmElement[]) => {
+    let nichoAtual = 0
+    for (const el of elementos) {
+      if (el.type === "nicho") {
+        nichoAtual = Number(el.tags?.i ?? 0)
+        continue
+      }
+      const id = `osm:${el.type}/${el.id}`
+      if (vistos.has(id)) continue
+      vistos.add(id)
+      coleta.adicionar(toEmpresa(el, lugar.nome, nichos[nichoAtual] ?? nichos[0]))
+    }
+  }
 
   // Um trabalhador por servidor, cada um começando pelo seu; se ele falhar, a região tenta os outros.
+  // Quando a meta de leads é atingida, as regiões que faltam deixam de ser buscadas.
   const fila = [...regioes]
   await Promise.all(
     OVERPASS_URLS.map(async (_, servidor) => {
-      while (fila.length > 0) {
+      while (fila.length > 0 && !coleta.metaAtingida()) {
         const regiao = fila.shift()!
-        const resposta = await consultarOverpass(montarQuery(filtros, regiao, lugar.areaId), servidor, prazoFinal, signal)
-        if (resposta.ok) {
-          for (const el of resposta.elementos) encontrados.set(`${el.type}/${el.id}`, el)
-        } else {
-          falhas.push(resposta.motivo)
-        }
-        concluidas++
-        reportar()
+        const resposta = await consultarOverpass(montarQuery(filtrosPorNicho, regiao, lugar.areaId), servidor, prazoFinal, signal)
+        if (resposta.ok) processar(resposta.elementos)
+        else falhas.push(resposta.motivo)
+        prontas++
+        progresso(
+          coleta.metaAtingida()
+            ? `Meta atingida: ${quantidade} leads sem site!`
+            : `Varrendo o mapa: ${prontas} de ${regioesTotal} regiões prontas…`,
+          prontas,
+          coleta.encontradas,
+          vistos.size,
+        )
       }
     }),
   )
 
-  if (falhas.length === regioes.length) {
+  if (falhas.length === prontas) {
     const motivos = [...new Set(falhas.flatMap((f) => f.split(", ")))].join("; ")
     throw new SearchError(`O servidor do mapa não respondeu (${motivos}). Espere um minuto e tente de novo.`)
   }
 
-  emit({ type: "progress", percent: 97, message: "Separando quem não tem site…", encontradas: encontrados.size })
+  // quem tem telefone primeiro: dá para entrar em contato na hora
+  const empresas = equilibrarPorNicho(
+    [...coleta.empresas.values()],
+    nichos,
+    quantidade,
+    (a, b) => Number(!!b.telefone) - Number(!!a.telefone) || a.nome.localeCompare(b.nome, "pt-BR"),
+  )
 
-  const empresas = [...encontrados.values()]
-    .map((el) => toEmpresa(el, lugar.nome))
-    .filter((e): e is Empresa => e !== null)
-    // quem tem telefone primeiro: dá para entrar em contato na hora
-    .sort((a, b) => Number(!!b.telefone) - Number(!!a.telefone) || a.nome.localeCompare(b.nome, "pt-BR"))
-
-  emit({ type: "progress", percent: 100, message: "Pronto!", encontradas: encontrados.size })
+  emit({
+    type: "progress",
+    percent: 100,
+    message: "Pronto!",
+    encontradas: empresas.length,
+    analisadas: vistos.size,
+    regioesProntas: prontas,
+    regioesTotal,
+  })
   emit({
     type: "result",
     fonte: "osm",
     cidade: lugar.nome,
-    nicho,
-    analisadas: encontrados.size,
+    nichos,
+    quantidade,
+    analisadas: vistos.size,
     empresas,
     regioesSemResposta: falhas.length,
   })

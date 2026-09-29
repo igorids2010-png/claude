@@ -8,11 +8,11 @@ const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"], 
 
 export const metadata: Metadata = {
   title: "Radar Sem Site",
-  description: "Encontre empresas no Google Maps que ainda não têm site.",
+  description: "Encontre empresas da sua cidade que ainda não têm site e organize seus leads.",
 }
 
 export const viewport: Viewport = {
-  themeColor: "#090d13",
+  themeColor: "#040506",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

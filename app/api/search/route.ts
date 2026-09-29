@@ -1,17 +1,35 @@
 import { GoogleIndisponivelError, searchGoogle } from "@/lib/google"
 import { searchOsm } from "@/lib/osm"
-import { SearchError, type SearchEvent } from "@/lib/types"
+import { MAX_NICHOS, QUANTIDADES, SearchError, type PedidoBusca, type SearchEvent } from "@/lib/types"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const cidade = (searchParams.get("cidade") ?? "").trim()
-  const nicho = (searchParams.get("nicho") ?? "").trim()
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY
+const MAX_EXCLUIR = 5000
 
+function lerPedido(body: unknown): PedidoBusca {
+  const b = (body ?? {}) as Record<string, unknown>
+  const cidade = typeof b.cidade === "string" ? b.cidade.trim().slice(0, 120) : ""
+  const nichos = Array.isArray(b.nichos)
+    ? [...new Set(b.nichos.filter((x): x is string => typeof x === "string").map((x) => x.trim().slice(0, 60)).filter(Boolean))]
+    : []
+  const quantidade = Number(b.quantidade)
+  const excluir = Array.isArray(b.excluir)
+    ? b.excluir.filter((x): x is string => typeof x === "string").slice(0, MAX_EXCLUIR)
+    : []
+
+  if (!cidade) throw new SearchError("Informe a cidade para buscar.")
+  if (nichos.length === 0) throw new SearchError("Escolha pelo menos um nicho.")
+  if (nichos.length > MAX_NICHOS) throw new SearchError(`Escolha no máximo ${MAX_NICHOS} nichos por busca.`)
+  if (!(QUANTIDADES as readonly number[]).includes(quantidade)) throw new SearchError("Quantidade de leads inválida.")
+
+  return { cidade, nichos, quantidade, excluir }
+}
+
+export async function POST(request: Request) {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY
+  const body = await request.json().catch(() => null)
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream<Uint8Array>({
@@ -22,15 +40,13 @@ export async function GET(request: Request) {
       }
 
       try {
-        if (!cidade || !nicho) {
-          throw new SearchError("Informe a cidade e o nicho para buscar.")
-        }
+        const pedido = lerPedido(body)
 
         // Google Maps quando a chave funciona; senão, OpenStreetMap (gratuito).
         let usouGoogle = false
         if (apiKey) {
           try {
-            await searchGoogle(apiKey, { cidade, nicho }, emit, request.signal)
+            await searchGoogle(apiKey, pedido, emit, request.signal)
             usouGoogle = true
           } catch (err) {
             if (!(err instanceof GoogleIndisponivelError)) throw err
@@ -38,7 +54,7 @@ export async function GET(request: Request) {
           }
         }
         if (!usouGoogle) {
-          await searchOsm({ cidade, nicho }, emit, request.signal)
+          await searchOsm(pedido, emit, request.signal)
         }
       } catch (err) {
         if (!request.signal.aborted) {

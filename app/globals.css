@@ -1,40 +1,55 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #090d13;
-  --color-panel: #10161f;
-  --color-panel-2: #151d29;
-  --color-line: #223049;
-  --color-line-soft: #1a2332;
-  --color-fg: #e9eef5;
-  --color-muted: #8b96a8;
-  --color-dim: #5c6779;
-  --color-signal: #ff7a45;
-  --color-signal-soft: #ffb488;
+  --color-ink: #040506;
+  --color-panel: #0b0c0f;
+  --color-panel-2: #111318;
+  --color-line: #1c2029;
+  --color-line-soft: #12151b;
+  --color-fg: #eef2f8;
+  --color-muted: #8a93a4;
+  --color-dim: #525a68;
+  --color-accent: #2f7cff;
+  --color-accent-soft: #8cb8ff;
   --color-star: #f2c14e;
-  --color-danger: #ff6b6b;
-  --color-ok: #4ad295;
+  --color-danger: #ff5d6c;
+  --color-ok: #3ddc97;
 
   --font-display: var(--nf-display), system-ui, sans-serif;
   --font-sans: var(--nf-sans), system-ui, -apple-system, sans-serif;
   --font-mono: var(--nf-mono), ui-monospace, "SFMono-Regular", monospace;
 
-  --animate-sweep: sweep 2.6s linear infinite;
-  --animate-blip: blip 2.6s ease-out infinite;
   --animate-rise: rise 0.4s ease both;
+  --animate-scan: scan 1.6s ease-in-out infinite;
+  --animate-pin: pin 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  --animate-ping-soft: ping-soft 1.8s ease-out infinite;
+  --animate-lupa: lupa 5s ease-in-out infinite;
 
-  @keyframes sweep {
-    to { transform: rotate(360deg); }
-  }
-  @keyframes blip {
-    0% { opacity: 0; transform: scale(0.4); }
-    12% { opacity: 1; transform: scale(1); }
-    70% { opacity: 0.25; }
-    100% { opacity: 0; }
-  }
   @keyframes rise {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+  /* faixa de luz que desce pela região sendo varrida */
+  @keyframes scan {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(260%); }
+  }
+  /* alfinete "caindo" no mapa quando uma empresa é encontrada */
+  @keyframes pin {
+    from { opacity: 0; transform: translate(-50%, -140%) scale(0.6); }
+    to { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+  }
+  @keyframes ping-soft {
+    0% { transform: scale(0.6); opacity: 0.7; }
+    100% { transform: scale(2.4); opacity: 0; }
+  }
+  /* lupa passeando pelo mapa */
+  /* valores relativos ao tamanho da lupa (28% do mapa): 250% ≈ atravessar o mapa */
+  @keyframes lupa {
+    0%, 100% { transform: translate(15%, 20%); }
+    25% { transform: translate(230%, 45%); }
+    50% { transform: translate(200%, 230%); }
+    75% { transform: translate(35%, 200%); }
   }
 }
 
@@ -46,8 +61,8 @@ body {
   margin: 0;
   min-height: 100dvh;
   background:
-    radial-gradient(circle at 1px 1px, var(--color-line-soft) 1px, transparent 1.6px) 0 0 / 26px 26px,
-    radial-gradient(ellipse 70% 45% at 50% -10%, rgb(255 122 69 / 0.08), transparent 70%),
+    radial-gradient(ellipse 80% 50% at 50% -12%, rgb(47 124 255 / 0.16), transparent 70%),
+    radial-gradient(circle at 1px 1px, var(--color-line-soft) 1px, transparent 1.6px) 0 0 / 28px 28px,
     var(--color-ink);
   background-attachment: fixed;
   color: var(--color-fg);
@@ -56,12 +71,12 @@ body {
 }
 
 ::selection {
-  background: rgb(255 122 69 / 0.25);
+  background: rgb(47 124 255 / 0.35);
 }
 
 @layer base {
   :focus-visible {
-    outline: 2px solid var(--color-signal-soft);
+    outline: 2px solid var(--color-accent-soft);
     outline-offset: 2px;
   }
 }

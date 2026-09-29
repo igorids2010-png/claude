@@ -1,6 +1,9 @@
 # Radar Sem Site
 
-Ferramenta de prospecção: você escolhe uma **cidade** e um **nicho**, o radar varre o mapa e mostra só as empresas que **não têm site** (ou que só têm Instagram/Facebook/WhatsApp), com telefone, endereço e link prontos para copiar.
+Ferramenta de prospecção com duas abas:
+
+- **Buscar leads** — você escolhe uma **cidade**, até **5 nichos** e **quantos leads** quer (10, 25, 50, 100 ou 200). O bot varre o mapa e traz só empresas que **não têm site** (ou que só têm Instagram/Facebook/WhatsApp), com telefone, endereço e link prontos para copiar.
+- **Meus leads** — as empresas que você já contatou. Na busca, o botão **"Mandei mensagem"** salva a empresa aqui; depois você acompanha o status (Mensagem enviada, Respondeu, Negociando, Fechado, Sem interesse), escreve anotações e baixa tudo em CSV. Os leads ficam salvos no navegador e não entram de novo na contagem das próximas buscas.
 
 ## Fontes de dados
 
@@ -13,13 +16,13 @@ Se a chave do Google existir mas for recusada (faturamento inativo, API desativa
 
 ## Como funciona
 
-1. **Cidade + nicho** — a cidade pode ser qualquer uma do Brasil (as capitais e cidades grandes aparecem como sugestão); o nicho pode ser escolhido da lista ou digitado livremente.
-2. **Varredura com progresso de 0 a 100%** — o servidor localiza a cidade, divide a área dela em uma grade de 3×3 regiões e busca o nicho em cada região. O progresso é enviado ao navegador em tempo real. No OpenStreetMap, cada nicho é traduzido para as categorias do mapa (ex: "Clínicas odontológicas" → `amenity=dentist`); nichos fora da lista são buscados pelo nome do estabelecimento.
-3. **Resultado** — só aparecem empresas abertas sem site próprio (no Google, ordenadas pelo número de avaliações; no OpenStreetMap, quem tem telefone aparece primeiro). Cada card tem telefone (com atalho para WhatsApp quando é celular), endereço, avaliação, link do Google Maps e o botão **Copiar dados**, que gera um bloco pronto para colar:
+1. **Cidade, nichos e quantidade** — a cidade pode ser qualquer uma do Brasil (capitais e cidades grandes aparecem como sugestão). Os nichos vêm de um catálogo agrupado (saúde, beleza, alimentação, automotivo, casa, comércio, serviços, educação), e dá para adicionar um nicho digitado.
+2. **Varredura com progresso de 0 a 100%** — o servidor localiza a cidade, divide a área em 9 regiões e busca todos os nichos em cada uma. A tela mostra o mapa das regiões sendo varridas e os leads aparecendo. A busca para assim que cada nicho tiver sua parte da meta, e o resultado é equilibrado entre os nichos.
+3. **Resultado** — cada card tem nicho, telefone (com atalho para WhatsApp quando é celular), endereço, link do mapa, **Copiar dados** e **Mandei mensagem**. O bloco copiado fica assim:
 
    ```
    Empresa: Lanchonete do Zé
-   Nicho: Lanchonetes
+   Nicho: Lanchonete
    Telefone: (41) 99876-1234
    Endereço: R. Mateus Leme, 812 - São Francisco, Curitiba - PR
    Avaliação: 4,6 (312 avaliações)
@@ -33,7 +36,9 @@ Se a chave do Google existir mas for recusada (faturamento inativo, API desativa
 - Next.js (App Router) + TypeScript + Tailwind CSS
 - `app/api/search/route.ts` — rota que responde em streaming NDJSON (`progress` → `result` | `error`) e escolhe a fonte
 - `lib/google.ts` — integração com a **Google Places API (New)** (`places:searchText`)
-- `lib/osm.ts` — integração com o **OpenStreetMap** (Nominatim para achar a cidade, Overpass para as empresas)
+- `lib/osm.ts` — integração com o **OpenStreetMap** (Nominatim para achar a cidade, Overpass para as empresas; todos os nichos vão numa consulta só por região)
+- `lib/nichos.ts` — catálogo de nichos e o filtro do OpenStreetMap de cada um
+- `lib/leads.ts` — "Meus leads", salvo no `localStorage` do navegador
 
 ## Rodando localmente
 
@@ -52,5 +57,5 @@ Importe o repositório na Vercel (o framework Next.js é detectado sozinho). Opc
 
 ## Custos
 
-- **OpenStreetMap:** grátis. Os servidores públicos pedem uso moderado; o bot faz 1 consulta ao Nominatim + 9 ao Overpass por busca, uma de cada vez.
-- **Google:** cada busca faz 1 consulta para localizar a cidade + até 27 consultas de Text Search (9 regiões × 3 páginas). Como o app pede telefone e site, as consultas entram na faixa "Enterprise" da Places API. Acompanhe o uso no Google Cloud e, se quiser, defina uma cota diária na chave.
+- **OpenStreetMap:** grátis. Os servidores públicos pedem uso moderado; o bot faz 1 consulta ao Nominatim + até 9 ao Overpass por busca (uma por região, divididas entre 3 servidores).
+- **Google:** cada busca faz 1 consulta para localizar a cidade + até 27 consultas de Text Search por nicho (9 regiões × 3 páginas), parando antes quando a meta de leads é atingida. Como o app pede telefone e site, as consultas entram na faixa "Enterprise" da Places API. Acompanhe o uso no Google Cloud e, se quiser, defina uma cota diária na chave.

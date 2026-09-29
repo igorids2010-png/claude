@@ -7,6 +7,7 @@ type Grupo = { titulo: string; itens: string[] }
 
 type Props = {
   label: string
+  ocultarLabel?: boolean
   placeholder: string
   value: string
   onChange: (value: string) => void
@@ -18,7 +19,7 @@ type Opcao = { valor: string; rotulo: string; grupo: string }
 
 const MAX_POR_GRUPO = 60
 
-export function Combobox({ label, placeholder, value, onChange, grupos, icon }: Props) {
+export function Combobox({ label, ocultarLabel = false, placeholder, value, onChange, grupos, icon }: Props) {
   const id = useId()
   const listId = `${id}-lista`
   const inputRef = useRef<HTMLInputElement>(null)
@@ -67,11 +68,14 @@ export function Combobox({ label, placeholder, value, onChange, grupos, icon }: 
 
   return (
     <div className="relative flex flex-col gap-2">
-      <label htmlFor={id} className="font-mono text-[0.7rem] font-medium uppercase tracking-[0.14em] text-muted">
+      <label
+        htmlFor={id}
+        className={ocultarLabel ? "sr-only" : "font-mono text-[0.7rem] font-medium uppercase tracking-[0.14em] text-muted"}
+      >
         {label}
       </label>
-      <div className="group flex items-center gap-3 rounded-2xl border border-line bg-panel-2 px-4 transition focus-within:border-signal-soft focus-within:shadow-[0_0_0_4px_rgb(255_122_69/0.14)]">
-        <span className="text-dim transition group-focus-within:text-signal" aria-hidden>
+      <div className="group flex items-center gap-3 rounded-2xl border border-line bg-panel-2 px-4 transition focus-within:border-accent focus-within:shadow-[0_0_0_4px_rgb(47_124_255/0.18)]">
+        <span className="text-dim transition group-focus-within:text-accent" aria-hidden>
           {icon}
         </span>
         <input
@@ -136,8 +140,8 @@ export function Combobox({ label, placeholder, value, onChange, grupos, icon }: 
                   onMouseEnter={() => setAtivo(i)}
                   onClick={() => escolher(opcao)}
                   className={`cursor-pointer rounded-xl px-3 py-2.5 text-sm transition ${
-                    i === ativo ? "bg-signal/12 text-fg" : "text-muted"
-                  } ${opcao.grupo === "" ? "font-semibold text-signal" : ""}`}
+                    i === ativo ? "bg-accent/15 text-fg" : "text-muted"
+                  } ${opcao.grupo === "" ? "font-semibold text-accent-soft" : ""}`}
                 >
                   {opcao.rotulo}
                 </div>

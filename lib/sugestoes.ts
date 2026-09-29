@@ -18,12 +18,3 @@ export const CIDADES_GRANDES = [
   "Petrolina, PE", "Vitória da Conquista, BA", "Uberaba, MG", "Pelotas, RS", "São José do Rio Preto, SP",
   "Cascavel, PR", "Anápolis, GO", "Jundiaí, SP", "Franca, SP",
 ]
-
-export const NICHOS = [
-  "Lanchonetes", "Restaurantes", "Pizzarias", "Hamburguerias", "Bares", "Padarias", "Mercados",
-  "Açougues", "Clínicas odontológicas", "Clínicas médicas", "Clínicas veterinárias", "Petshops",
-  "Salões de beleza", "Barbearias", "Estética", "Academias", "Oficinas mecânicas", "Lava-rápidos",
-  "Autopeças", "Farmácias", "Óticas", "Lojas de roupas", "Materiais de construção", "Imobiliárias",
-  "Escritórios de contabilidade", "Advocacia", "Escolas de idiomas", "Floriculturas",
-  "Assistência técnica de celular",
-]
