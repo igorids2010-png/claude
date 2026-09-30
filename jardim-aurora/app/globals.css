@@ -1,0 +1,200 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Paleta Jardim Aurora — verde-escuro, dourado suave e creme */
+@theme {
+  --color-forest-950: #0f1f18;
+  --color-forest-900: #172d23;
+  --color-forest-800: #1f3a2e;
+  --color-forest-700: #2d5240;
+  --color-forest-600: #3d6a54;
+  --color-forest-500: #5a8670;
+  --color-forest-300: #a9c2b3;
+
+  --color-gold-200: #efe3c4;
+  --color-gold-300: #e2cf9f;
+  --color-gold-400: #d6bd80;
+  --color-gold-500: #c9a961;
+  --color-gold-600: #a88a45;
+  /* dourado para texto sobre creme (contraste AA) */
+  --color-gold-700: #7a5e22;
+
+  --color-cream-50: #fbf8f2;
+  --color-cream-100: #f5f0e6;
+  --color-cream-200: #ebe3d3;
+  --color-cream-300: #ddd1b9;
+
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-ken-burns: ken-burns 28s ease-in-out infinite alternate;
+  --animate-marquee: marquee 38s linear infinite;
+  --animate-spin-slow: spin 22s linear infinite;
+  --animate-float: float 9s ease-in-out infinite;
+  --animate-scroll-dot: scroll-dot 1.8s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 2.4s ease-out infinite;
+
+  @keyframes ken-burns {
+    from {
+      transform: scale(1.06) translate3d(0, 0, 0);
+    }
+    to {
+      transform: scale(1.18) translate3d(-2%, -1.5%, 0);
+    }
+  }
+  @keyframes marquee {
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+  @keyframes float {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) rotate(var(--r, 0deg));
+    }
+    50% {
+      transform: translate3d(12px, -22px, 0) rotate(calc(var(--r, 0deg) + 14deg));
+    }
+  }
+  @keyframes scroll-dot {
+    0% {
+      opacity: 0;
+      transform: translateY(0);
+    }
+    30% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(1);
+      opacity: 0.55;
+    }
+    100% {
+      transform: scale(1.75);
+      opacity: 0;
+    }
+  }
+}
+
+/* Tokens semânticos do shadcn/ui mapeados para a paleta */
+:root {
+  --radius: 0.75rem;
+  --background: var(--color-cream-100);
+  --foreground: var(--color-forest-800);
+  --card: var(--color-cream-50);
+  --card-foreground: var(--color-forest-800);
+  --popover: var(--color-cream-50);
+  --popover-foreground: var(--color-forest-800);
+  --primary: var(--color-forest-800);
+  --primary-foreground: var(--color-cream-100);
+  --secondary: var(--color-cream-200);
+  --secondary-foreground: var(--color-forest-800);
+  --muted: var(--color-cream-200);
+  --muted-foreground: #4f5f56;
+  --accent: var(--color-gold-500);
+  --accent-foreground: var(--color-forest-900);
+  --destructive: #a3412f;
+  --border: #ddd3bf;
+  --input: #ddd3bf;
+  --ring: var(--color-gold-500);
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-playfair), ui-serif, Georgia, serif;
+  --font-script: var(--font-signature), cursive;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-serif;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  ::selection {
+    background: var(--color-gold-300);
+    color: var(--color-forest-900);
+  }
+  /* Foco visível com anel dourado em todo o site */
+  :focus-visible {
+    outline: 2px solid var(--color-gold-500);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+@layer utilities {
+  /* Textura sutil de papel sobre o creme */
+  .bg-paper {
+    background-color: var(--color-cream-100);
+    background-image:
+      radial-gradient(circle at 20% 10%, rgb(201 169 97 / 0.07), transparent 40%),
+      radial-gradient(circle at 85% 70%, rgb(31 58 46 / 0.05), transparent 45%);
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .mask-fade-x {
+    mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
