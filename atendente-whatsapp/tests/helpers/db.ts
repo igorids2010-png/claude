@@ -15,7 +15,7 @@ export function getTestDb(): Promise<Db> {
 }
 
 export async function resetTestDb(db: Db): Promise<void> {
-  await db.exec("truncate jobs, messages, conversations, patients, clinic_channels, clinics cascade");
+  await db.exec("truncate clinics, jobs cascade");
 }
 
 async function createTestDb(): Promise<Db> {

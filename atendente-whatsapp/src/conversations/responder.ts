@@ -10,11 +10,15 @@ export interface ReplyContext {
   clinicId: string;
   clinicName: string;
   conversationId: string;
+  /** Última mensagem do paciente no lote (identifica o lote; evita alertas repetidos). */
+  sourceMessageId: string;
+  /** Primeira resposta da conversa: o aviso de apresentação sai junto. */
+  firstReply: boolean;
   /** Mensagens legíveis (texto e botões) ainda não respondidas, em ordem. */
   messages: PendingInbound[];
 }
 
-/** Gera as respostas de texto para as mensagens legíveis do paciente. */
+/** Gera as respostas de texto para as mensagens legíveis do paciente (pode devolver nenhuma). */
 export interface Responder {
   reply(context: ReplyContext): Promise<string[]>;
 }

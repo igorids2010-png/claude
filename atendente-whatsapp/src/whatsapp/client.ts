@@ -53,6 +53,12 @@ export interface SendTarget {
 export interface WhatsAppClient {
   sendText(target: SendTarget, to: string, body: string): Promise<{ waMessageId: string }>;
   markAsRead(target: SendTarget, waMessageId: string): Promise<void>;
+  /** Template aprovado na Meta: o único jeito de iniciar conversa fora da janela de 24h. */
+  sendTemplate(
+    target: SendTarget,
+    to: string,
+    template: { name: string; languageCode: string; bodyParams: string[] },
+  ): Promise<{ waMessageId: string }>;
 }
 
 export function createWhatsAppClient(options: WhatsAppClientOptions): WhatsAppClient {
@@ -112,19 +118,34 @@ export function createWhatsAppClient(options: WhatsAppClientOptions): WhatsAppCl
     );
   }
 
+  function messageId(json: unknown): { waMessageId: string } {
+    const waMessageId = (json as { messages?: Array<{ id?: string }> } | null)?.messages?.[0]?.id;
+    if (!waMessageId) throw new WhatsAppApiError("Resposta da Graph API sem ID da mensagem", 200, undefined, false);
+    return { waMessageId };
+  }
+
   return {
     async sendText(target, to, body) {
-      const json = (await post(target, {
-        recipient_type: "individual",
-        to,
-        type: "text",
-        text: { preview_url: false, body },
-      })) as { messages?: Array<{ id?: string }> } | null;
-      const waMessageId = json?.messages?.[0]?.id;
-      if (!waMessageId) {
-        throw new WhatsAppApiError("Resposta da Graph API sem ID da mensagem", 200, undefined, false);
-      }
-      return { waMessageId };
+      return messageId(
+        await post(target, { recipient_type: "individual", to, type: "text", text: { preview_url: false, body } }),
+      );
+    },
+
+    async sendTemplate(target, to, template) {
+      return messageId(
+        await post(target, {
+          recipient_type: "individual",
+          to,
+          type: "template",
+          template: {
+            name: template.name,
+            language: { code: template.languageCode },
+            components: template.bodyParams.length
+              ? [{ type: "body", parameters: template.bodyParams.map((text) => ({ type: "text", text })) }]
+              : [],
+          },
+        }),
+      );
     },
 
     async markAsRead(target, waMessageId) {

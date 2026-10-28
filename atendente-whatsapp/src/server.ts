@@ -1,11 +1,14 @@
+import Anthropic from "@anthropic-ai/sdk";
+import { createClaudeResponder } from "./ai/claude-responder.js";
 import { buildApp } from "./app.js";
+import { createProfileCache } from "./clinics/profile.js";
 import { loadEnv } from "./config/env.js";
 import { createConversationProcessor } from "./conversations/processor.js";
-import { placeholderResponder } from "./conversations/responder.js";
 import { createPostgresDb } from "./db/db.js";
 import { createLogger } from "./lib/logger.js";
-import { PROCESS_CONVERSATION } from "./queue/jobs.js";
+import { DELIVER_STAFF_ALERT, PROCESS_CONVERSATION } from "./queue/jobs.js";
 import { createWorker } from "./queue/worker.js";
+import { createAlertDeliveryHandler } from "./team/alerts.js";
 import { createWhatsAppClient } from "./whatsapp/client.js";
 
 const env = loadEnv();
@@ -24,6 +27,23 @@ const whatsapp = createWhatsAppClient({
   logger,
 });
 
+const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, timeout: env.AI_TIMEOUT_MS, maxRetries: 2 });
+
+const responder = createClaudeResponder({
+  db,
+  logger,
+  createMessage: (params) => anthropic.beta.messages.create(params),
+  getProfile: createProfileCache(db),
+  model: env.AI_MODEL,
+  effort: env.AI_EFFORT,
+  maxTokens: env.AI_MAX_TOKENS,
+  serverFallbacks: env.AI_SERVER_FALLBACKS,
+  history: { maxMessages: env.AI_HISTORY_MAX_MESSAGES, maxChars: env.AI_HISTORY_MAX_CHARS },
+  maxCallsPerConversationPerHour: env.AI_MAX_CALLS_PER_CONVERSATION_PER_HOUR,
+  maxCallsPerClinicPerDay: env.AI_MAX_CALLS_PER_CLINIC_PER_DAY,
+  jobMaxAttempts: env.JOB_MAX_ATTEMPTS,
+});
+
 const worker = createWorker({
   db,
   logger,
@@ -34,10 +54,11 @@ const worker = createWorker({
     [PROCESS_CONVERSATION]: createConversationProcessor({
       db,
       whatsapp,
-      responder: placeholderResponder,
+      responder,
       encryptionKey: env.ENCRYPTION_KEY,
       logger,
     }),
+    [DELIVER_STAFF_ALERT]: createAlertDeliveryHandler({ db, whatsapp, encryptionKey: env.ENCRYPTION_KEY, logger }),
   },
 });
 

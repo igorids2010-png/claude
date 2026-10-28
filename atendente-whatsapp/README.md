@@ -3,11 +3,11 @@
 Sistema multi-clínica: o mesmo servidor atende várias clínicas, cada uma com seu número
 de WhatsApp (WhatsApp Cloud API oficial da Meta), sua configuração e sua agenda.
 
-> **Status: Fase 1 concluída** (webhook, fila, idempotência, envio de texto).
-> As próximas fases adicionam o atendente com IA (Claude), agendamento com Google Calendar,
-> transferência para humano, lembretes e o painel da clínica.
+> **Status: Fases 1 e 2 concluídas** (webhook, fila e atendente com IA).
+> Próximas fases: agendamento com Google Calendar, transferência para humano, lembretes e o
+> painel da clínica.
 
-## Como funciona (Fase 1)
+## Como funciona
 
 ```
 Meta ──POST /webhook──▶ valida X-Hub-Signature-256 ──▶ grava mensagem (UNIQUE wa_message_id)
@@ -34,6 +34,33 @@ worker (mesmo processo) ──▶ pega job (FOR UPDATE SKIP LOCKED, um por conve
 - **Multi-clínica**: o `phone_number_id` do webhook identifica a clínica; cada clínica envia com o
   próprio token (guardado criptografado com AES-256-GCM).
 
+### Atendente com IA (Fase 2)
+
+O worker monta a resposta com o **Claude** (`claude-fable-5-1` por padrão, configurável em `AI_MODEL`):
+
+- **Prompt de sistema por clínica**, montado do arquivo de configuração: nome, endereço, serviços,
+  preços, duração, horários, convênios, formas de pagamento e política de cancelamento. É
+  determinístico, então a API reaproveita o cache de prompt entre mensagens.
+- **Data e hora** (no fuso da clínica) vão numa mensagem de sistema no fim da conversa, para a IA
+  saber se a clínica está aberta sem quebrar o cache.
+- **Histórico** das últimas 40 mensagens (até 20 mil caracteres), cortando as mais antigas.
+- **Regras obrigatórias** no prompt: sem diagnóstico, sem orientação médica ou remédio, sem inventar
+  preço/horário/serviço, emergência → SAMU 192 (risco de suicídio → CVV 188), "vou confirmar com a
+  equipe" quando não souber, pedido de atendente → avisa o responsável.
+- **Ferramentas** (tool use): `notify_team` (alerta para a recepção: emergência, pedido de atendente,
+  dúvida sem resposta, agendamento, reclamação) e `request_data_deletion` (LGPD).
+- **Rede de segurança de emergência** sem depender da IA: se a mensagem tem sinais claros de
+  emergência e a resposta não cita o 192 (ou a IA está fora do ar), o sistema envia a orientação do
+  SAMU e alerta a equipe.
+- **IA fora do ar**: o paciente recebe uma mensagem padrão e a equipe é avisada.
+- **Recusa do modelo**: com `AI_SERVER_FALLBACKS=true`, a própria API refaz o pedido em outro modelo;
+  se ainda assim recusar, o paciente ouve que a equipe vai confirmar.
+- **Limites de uso**: por conversa (30 chamadas/hora) e por clínica (3.000/dia).
+- **Uso de tokens** gravado por chamada em `ai_usage`; a view `clinic_monthly_ai_usage` soma por
+  clínica e mês, para calcular custo e mensalidade.
+- **Alertas para a equipe** vão por WhatsApp para `team.alert_whatsapp`, num job próprio com
+  retentativas. Fora da janela de 24h da recepção, usa o template `team.alert_template` (se houver).
+
 ## Estrutura
 
 ```
@@ -42,6 +69,8 @@ src/
   app.ts                 Fastify: /health e rotas do webhook
   config/env.ts          variáveis de ambiente validadas com Zod
   http/webhook.ts        GET de verificação e POST de recebimento
+  ai/                    prompt, histórico, ferramentas, rede de segurança, responder do Claude
+  team/                  alertas para a equipe da clínica
   whatsapp/              assinatura, schema do payload, cliente da Graph API (retry/backoff)
   conversations/         ingest (gravação idempotente), processor (respostas), textos
   queue/                 fila no Postgres (jobs.ts) e worker
@@ -51,6 +80,7 @@ src/
 supabase/migrations/     SQL (mesmo formato do Supabase CLI)
 clinics/                 arquivos de configuração das clínicas (sem segredos)
 tests/                   unitários e integração (Postgres real via PGlite)
+evals/                   suíte de conversas difíceis contra a API real do Claude
 ```
 
 ## Rodando localmente
@@ -72,14 +102,30 @@ gerada + `/webhook` no painel da Meta.
 ## Testes
 
 ```bash
-npm test          # unitários + integração; não precisa de banco nem de internet
+npm test          # unitários + integração; não precisa de banco, internet nem chave de API
 npm run typecheck
 ```
 
-Os testes de integração rodam as migrations reais num Postgres em memória (PGlite) e usam uma
-Graph API falsa. Cobrem: assinatura, verificação do webhook, idempotência, debounce, mídias,
-retry sem duplicar envio, erro permanente (janela de 24h), job travado, concorrência na mesma
-conversa e isolamento entre clínicas.
+Os testes de integração rodam as migrations reais num Postgres em memória (PGlite), com uma
+Graph API e um Claude simulados. Cobrem: assinatura, verificação do webhook, idempotência,
+debounce, mídias, retry sem duplicar envio, janela de 24h, job travado, concorrência, isolamento
+entre clínicas, montagem da requisição ao Claude, loop de ferramentas, alertas, emergência, falha e
+recusa da IA, limites de uso e registro de tokens.
+
+### Suíte de conversas difíceis (Claude de verdade)
+
+```bash
+npm run eval:conversations                                   # todos os casos
+npm run eval:conversations -- --only emergencia-medica --repeat 3
+```
+
+Precisa de `ANTHROPIC_API_KEY` (custa alguns centavos por rodada). Os casos estão em
+`evals/conversations.yaml`: pergunta de preço, preço não divulgado, serviço inexistente, pedido de
+diagnóstico e remédio, emergência, risco de suicídio, paciente irritado, pedido de atendente,
+remarcação, fora do horário, erros de digitação, mensagens confusas, tentativa de manipulação,
+convênio não aceito, exclusão de dados e emergência veterinária. Cada caso tem verificações
+objetivas (ex.: "contém 192", "criou alerta de emergência") e um critério avaliado por um segundo
+modelo (`EVAL_JUDGE_MODEL`, padrão `claude-opus-5-5`). Rode sempre que mudar o prompt ou o modelo.
 
 ## Configurando a Meta (WhatsApp Cloud API)
 
@@ -114,6 +160,24 @@ npm run clinic:upsert -- clinics/minha-clinica.yaml
 
 O comando é idempotente (rodar de novo atualiza). O token da Meta nunca fica no arquivo: ele é
 lido da variável de ambiente indicada em `whatsapp.access_token_env` e salvo criptografado.
+
+O arquivo de exemplo documenta todos os campos: serviços (`price` em reais; sem `price`, o
+atendente diz que a equipe informa), horários por dia (`mon` ... `sun`, vários intervalos),
+convênios, políticas, informações extras e o WhatsApp da recepção para alertas. Campos com nome
+errado são recusados, para um erro de digitação não passar despercebido.
+
+## Custos da IA
+
+- Claude Fable 5.1: US$ 10 por milhão de tokens de entrada e US$ 50 por milhão de saída; leitura
+  de cache a US$ 0,25 por milhão. O consumo real por mensagem depende do tamanho da configuração
+  da clínica, do histórico e do raciocínio do modelo: meça com a suíte de conversas (ela mostra os
+  tokens no final) e acompanhe em produção pela view abaixo.
+- Para reduzir custo: `AI_EFFORT=medium`, ou `AI_MODEL=claude-opus-5-5` (US$ 4 / US$ 20). Rode a
+  suíte de conversas antes de trocar, para confirmar que a qualidade se mantém.
+- Consulte o consumo por clínica:
+  `select * from clinic_monthly_ai_usage order by month desc;`
+- O Fable 5.1 exige retenção de dados de 30 dias na organização da Anthropic (não funciona com
+  "zero data retention"). Vale mencionar isso no contrato com as clínicas (LGPD).
 
 ## Deploy (Railway ou Render)
 

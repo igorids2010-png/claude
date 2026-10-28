@@ -1,14 +1,75 @@
 # Exemplo de configuração de clínica. Copie, ajuste e rode:
 #   npm run clinic:upsert -- clinics/exemplo-fisio.yaml
-# O token da Meta NÃO fica aqui: ele é lido da variável indicada em access_token_env.
+#
+# Tudo o que o atendente fala sobre a clínica sai deste arquivo: o que não estiver aqui,
+# ele diz que vai confirmar com a equipe. O token da Meta NÃO fica aqui: ele é lido da
+# variável de ambiente indicada em access_token_env.
 slug: exemplo-fisio
 name: Clínica Movimento Fisioterapia
+specialty: fisioterapia # fisioterapia | odontologia | estetica | veterinaria | outra
 timezone: America/Sao_Paulo
 active: true
+
+address: Rua das Palmeiras, 250, sala 12 - Centro, Campinas - SP
+maps_url: https://maps.google.com/?q=Rua+das+Palmeiras+250+Campinas
+phone: (19) 3200-0000
+
 whatsapp:
   # Painel da Meta > WhatsApp > Configuração da API > "Identificação do número de telefone"
   phone_number_id: "000000000000000"
   # "Identificação da conta do WhatsApp Business"
   waba_id: "000000000000000"
-  display_phone: "+55 11 90000-0000"
+  display_phone: "+55 19 90000-0000"
   access_token_env: EXEMPLO_FISIO_WHATSAPP_TOKEN
+
+team:
+  # WhatsApp da recepção que recebe os alertas (emergência, pedido de atendente, dúvidas...).
+  # Só dígitos, com 55 + DDD. No número de teste da Meta, ele precisa estar na lista "Para".
+  alert_whatsapp: "5519900000000"
+  # Opcional: template aprovado na Meta, com 1 variável no corpo, usado quando a recepção
+  # não falou com o número nas últimas 24h (fora da janela, texto livre não é entregue).
+  # alert_template: alerta_equipe
+
+services:
+  - key: avaliacao
+    name: Avaliação fisioterapêutica
+    description: Primeira consulta, com avaliação completa e plano de tratamento.
+    price: 150
+    duration_minutes: 50
+  - key: sessao
+    name: Sessão de fisioterapia
+    price: 120
+    price_note: a partir de
+    duration_minutes: 50
+    interval_after_minutes: 10
+  - key: pacote-10
+    name: Pacote com 10 sessões
+    price: 1000
+    duration_minutes: 50
+  - key: pilates
+    name: Pilates clínico
+    description: Turmas de até 3 pessoas.
+    # sem "price": o atendente diz que a equipe informa o valor
+    duration_minutes: 55
+
+# Dias: mon tue wed thu fri sat sun. Vários intervalos por dia, no formato "HH:MM-HH:MM".
+business_hours:
+  mon: ["08:00-12:00", "13:00-19:00"]
+  tue: ["08:00-12:00", "13:00-19:00"]
+  wed: ["08:00-12:00", "13:00-19:00"]
+  thu: ["08:00-12:00", "13:00-19:00"]
+  fri: ["08:00-12:00", "13:00-18:00"]
+  sat: ["08:00-12:00"]
+
+insurance:
+  accepted: [Unimed, Bradesco Saúde]
+  notes: Para outros planos, emitimos recibo para reembolso.
+
+policies:
+  cancellation: Cancelamentos e remarcações sem custo com até 24h de antecedência. Faltas sem aviso são cobradas.
+  payment: Pix, cartão de débito e crédito (até 3x sem juros no pacote).
+
+extra_info: |
+  Estacionamento conveniado no prédio ao lado (1h grátis).
+  A clínica tem acesso para cadeira de rodas e elevador.
+  Venha com roupa confortável.

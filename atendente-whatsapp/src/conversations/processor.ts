@@ -77,19 +77,26 @@ export function createConversationProcessor(deps: ProcessorDeps): JobHandler {
     const replies: PlannedReply[] = [];
     if (hasMedia) replies.push({ dedupeKey: `${last.id}:media`, text: MEDIA_NOT_SUPPORTED_TEXT });
     if (readable.length > 0) {
-      const texts = await deps.responder.reply({
-        clinicId: conversation.clinic_id,
-        clinicName: conversation.clinic_name,
-        conversationId: conversation.conversation_id,
-        messages: readable.map<PendingInbound>((message) => ({
-          id: message.id,
-          kind: message.type,
-          body: message.body,
-        })),
-      });
-      texts
-        .flatMap((text) => splitText(text))
-        .forEach((text, index) => replies.push({ dedupeKey: `${last.id}:reply:${index}`, text }));
+      // Numa nova tentativa do job, reaproveita as respostas já geradas em vez de chamar a IA de novo.
+      const planned = await loadPlannedReplies(deps.db, last.id);
+      const texts =
+        planned.length > 0
+          ? planned
+          : (
+              await deps.responder.reply({
+                clinicId: conversation.clinic_id,
+                clinicName: conversation.clinic_name,
+                conversationId: conversation.conversation_id,
+                sourceMessageId: last.id,
+                firstReply: !conversation.disclosure_sent_at,
+                messages: readable.map<PendingInbound>((message) => ({
+                  id: message.id,
+                  kind: message.type,
+                  body: message.body,
+                })),
+              })
+            ).flatMap((text) => splitText(text));
+      texts.forEach((text, index) => replies.push({ dedupeKey: `${last.id}:reply:${index}`, text }));
     }
 
     if (replies.length > 0 && !conversation.disclosure_sent_at) {
@@ -149,6 +156,16 @@ async function sendOnce(
     ]);
     throw error;
   }
+}
+
+async function loadPlannedReplies(db: Db, lastInboundId: string): Promise<string[]> {
+  const { rows } = await db.query<{ body: string }>(
+    `select body from messages
+     where direction = 'outbound' and dedupe_key like $1 and body is not null
+     order by (substring(dedupe_key from '[0-9]+$'))::int`,
+    [`${lastInboundId}:reply:%`],
+  );
+  return rows.map((row) => row.body);
 }
 
 async function loadConversation(db: Db, conversationId: string): Promise<ConversationRow | null> {

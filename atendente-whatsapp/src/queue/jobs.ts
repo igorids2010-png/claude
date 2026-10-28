@@ -1,6 +1,7 @@
 import type { Queryable } from "../db/db.js";
 
 export const PROCESS_CONVERSATION = "process_conversation";
+export const DELIVER_STAFF_ALERT = "deliver_staff_alert";
 
 export interface Job {
   id: string;
@@ -41,6 +42,20 @@ export async function enqueueConversationJob(
        updated_at = now()
      returning id`,
     [PROCESS_CONVERSATION, conversationId, options.debounceMs, options.debounceMaxMs, options.maxAttempts],
+  );
+  return rows[0]!.id;
+}
+
+/** Agenda um job avulso (sem conversa), para rodar o quanto antes. */
+export async function enqueueJob(
+  db: Queryable,
+  type: string,
+  payload: Record<string, unknown>,
+  options: { maxAttempts: number },
+): Promise<string> {
+  const { rows } = await db.query<{ id: string }>(
+    `insert into jobs (type, payload, max_attempts) values ($1, $2, $3) returning id`,
+    [type, JSON.stringify(payload), options.maxAttempts],
   );
   return rows[0]!.id;
 }
