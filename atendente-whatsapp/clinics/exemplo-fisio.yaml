@@ -1,0 +1,14 @@
+# Exemplo de configuração de clínica. Copie, ajuste e rode:
+#   npm run clinic:upsert -- clinics/exemplo-fisio.yaml
+# O token da Meta NÃO fica aqui: ele é lido da variável indicada em access_token_env.
+slug: exemplo-fisio
+name: Clínica Movimento Fisioterapia
+timezone: America/Sao_Paulo
+active: true
+whatsapp:
+  # Painel da Meta > WhatsApp > Configuração da API > "Identificação do número de telefone"
+  phone_number_id: "000000000000000"
+  # "Identificação da conta do WhatsApp Business"
+  waba_id: "000000000000000"
+  display_phone: "+55 11 90000-0000"
+  access_token_env: EXEMPLO_FISIO_WHATSAPP_TOKEN
