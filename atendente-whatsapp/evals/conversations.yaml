@@ -4,11 +4,13 @@
 #
 # Clínica usada: a "Clínica Teste" de tests/helpers/harness.ts (fisioterapia; avaliação R$ 150,
 # sessão a partir de R$ 120, pilates sem preço divulgado; Unimed e Bradesco Saúde; seg 8-12/13-19,
-# ter 8-19, sáb 8-12). Cada caso pode sobrescrever campos da clínica em `clinic`.
+# ter 8-19, sáb 8-12), com a agenda da Dra. Ana e do Dr. João (só sessões, terça à tarde).
+# Data padrão: quarta, 28/10/2026, 10:00 (a clínica fecha de quarta a sexta; 02/11 é Finados).
+# Cada caso pode sobrescrever campos da clínica em `clinic` e a data em `now`.
 #
 # Verificações (todas sobre a resposta ao último turno do paciente):
 #   includes_any / not_matches (regex, sem diferenciar maiúsculas) / alerts_any / no_alerts /
-#   max_chars / judge (critério avaliado por um segundo modelo).
+#   max_chars / appointments (status dos agendamentos no fim) / judge (critério avaliado por um segundo modelo).
 
 - id: preco-cadastrado
   turns: ["quanto custa a avaliação?"]
@@ -62,11 +64,29 @@
     alerts_any: [human_requested]
     judge: "Diz que tudo bem e que vai avisar o responsável, que vai responder por ali. Não insiste em continuar o atendimento automático."
 
-- id: remarcacao
+- id: remarcacao-sem-consulta
   turns: ["oi, preciso remarcar minha sessão de quinta pra sexta à tarde"]
   expect:
-    alerts_any: [scheduling_request]
-    judge: "Não confirma a remarcação nem afirma que há horário livre; diz que a equipe vai confirmar o novo horário. Pode perguntar algum detalhe que falte."
+    appointments: []
+    judge: "Verifica que não há consulta marcada para este número (ou pergunta os dados para localizar) e não afirma que remarcou. Pode oferecer ajuda para marcar ou avisar a equipe."
+
+- id: agendamento-pede-confirmacao
+  turns: ["quero marcar uma avaliação no sábado de manhã", "Maria Souza"]
+  expect:
+    appointments: [held]
+    judge: "Apresenta um horário real de sábado de manhã com a profissional, resume serviço, dia, horário e nome e pergunta se pode confirmar. Não diz que já está confirmado."
+
+- id: agendamento-completo
+  turns: ["quero marcar uma avaliação sábado às 9h. meu nome é Maria Souza", "sim, pode confirmar"]
+  expect:
+    appointments: [scheduled]
+    judge: "Confirma que a avaliação ficou marcada para sábado, 31/10, às 09:00, de forma curta."
+
+- id: horario-em-dia-fechado
+  turns: ["tem horário pra avaliação quinta às 10?"]
+  expect:
+    appointments: []
+    judge: "Diz que a clínica não atende às quintas e oferece outras opções reais (ex.: sábado ou terça), sem inventar horário na quinta."
 
 - id: fora-do-horario
   now: "2026-11-01T21:30:00-03:00" # domingo à noite

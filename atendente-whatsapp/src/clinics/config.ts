@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Db, Queryable } from "../db/db.js";
 import { encryptSecret } from "../lib/crypto.js";
+import { fromLocal } from "../lib/time.js";
 
 /**
  * Arquivo de configuração de uma clínica (clinics/<slug>.yaml). Nenhum segredo vai no
@@ -32,6 +33,22 @@ const serviceSchema = z.strictObject({
   duration_minutes: z.number().int().min(5).max(600),
   /** Intervalo de preparo/limpeza depois do atendimento (usado na agenda, Fase 3). */
   interval_after_minutes: z.number().int().min(0).max(240).default(0),
+  active: z.boolean().default(true),
+});
+
+const localDateTime = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'formato "AAAA-MM-DDTHH:MM", ex.: "2026-12-24T12:00"');
+
+const professionalSchema = z.strictObject({
+  key: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "use letras minúsculas, números e hífens"),
+  name: z.string().min(2),
+  /** ID da agenda do Google (geralmente o e-mail), compartilhada com a conta de serviço. */
+  google_calendar_id: z.string().min(3).optional(),
+  /** Keys dos serviços que ele atende. Omitido = todos. */
+  services: z.array(z.string()).optional(),
+  /** Horário próprio. Omitido = horário da clínica. Sempre limitado ao horário da clínica. */
+  hours: z.partialRecord(z.enum(WEEKDAYS), z.array(timeRange)).optional(),
   active: z.boolean().default(true),
 });
 
@@ -77,6 +94,62 @@ export const clinicConfigSchema = z.strictObject({
     .default({}),
   /** Outras informações que o atendente pode usar (estacionamento, acessibilidade...). */
   extra_info: z.string().optional(),
+  professionals: z
+    .array(professionalSchema)
+    .default([])
+    .refine((list) => new Set(list.map((p) => p.key)).size === list.length, "há profissionais com key repetida"),
+  scheduling: z
+    .strictObject({
+      /** Grade dos horários oferecidos: 30 = 08:00, 08:30, 09:00... */
+      slot_step_minutes: z.number().int().min(5).max(240).default(30),
+      /** Antecedência mínima para marcar. */
+      min_advance_minutes: z.number().int().min(0).max(10080).default(120),
+      /** Até quantos dias à frente oferecer horários. */
+      max_advance_days: z.number().int().min(1).max(365).default(60),
+    })
+    .default({ slot_step_minutes: 30, min_advance_minutes: 120, max_advance_days: 60 }),
+  holidays: z
+    .strictObject({
+      /** Feriados nacionais automáticos (inclui Sexta-feira Santa). */
+      national: z.boolean().default(true),
+      /** Feriados locais, emendas e dias sem atendimento. */
+      dates: z
+        .array(
+          z.union([
+            z.iso.date(),
+            z.strictObject({ date: z.iso.date(), name: z.string().optional() }),
+          ]),
+        )
+        .default([]),
+    })
+    .default({ national: true, dates: [] }),
+  /** Períodos sem atendimento (férias, reforma). Sem `professional` = clínica toda. */
+  blocks: z
+    .array(
+      z.strictObject({
+        start: localDateTime,
+        end: localDateTime,
+        professional: z.string().optional(),
+        reason: z.string().optional(),
+      }),
+    )
+    .default([]),
+}).superRefine((config, ctx) => {
+  const serviceKeys = new Set(config.services.map((s) => s.key));
+  const professionalKeys = new Set(config.professionals.map((p) => p.key));
+  config.professionals.forEach((professional, index) => {
+    for (const key of professional.services ?? []) {
+      if (!serviceKeys.has(key)) {
+        ctx.addIssue({ code: "custom", path: ["professionals", index, "services"], message: `serviço "${key}" não existe` });
+      }
+    }
+  });
+  config.blocks.forEach((block, index) => {
+    if (block.start >= block.end) ctx.addIssue({ code: "custom", path: ["blocks", index], message: "start precisa ser antes de end" });
+    if (block.professional && !professionalKeys.has(block.professional)) {
+      ctx.addIssue({ code: "custom", path: ["blocks", index, "professional"], message: `profissional "${block.professional}" não existe` });
+    }
+  });
 });
 
 export type ClinicConfig = z.infer<typeof clinicConfigSchema>;
@@ -97,15 +170,18 @@ export async function upsertClinic(
     const clinic = await tx.query<{ id: string }>(
       `insert into clinics (slug, name, specialty, timezone, active, address, maps_url, phone_display,
                             cancellation_policy, payment_methods, insurance_notes, extra_info,
-                            team_alert_wa_id, team_alert_template)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                            team_alert_wa_id, team_alert_template, slot_step_minutes, min_advance_minutes,
+                            max_advance_days, national_holidays)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
        on conflict (slug) do update set
          name = excluded.name, specialty = excluded.specialty, timezone = excluded.timezone,
          active = excluded.active, address = excluded.address, maps_url = excluded.maps_url,
          phone_display = excluded.phone_display, cancellation_policy = excluded.cancellation_policy,
          payment_methods = excluded.payment_methods, insurance_notes = excluded.insurance_notes,
          extra_info = excluded.extra_info, team_alert_wa_id = excluded.team_alert_wa_id,
-         team_alert_template = excluded.team_alert_template, updated_at = now()
+         team_alert_template = excluded.team_alert_template, slot_step_minutes = excluded.slot_step_minutes,
+         min_advance_minutes = excluded.min_advance_minutes, max_advance_days = excluded.max_advance_days,
+         national_holidays = excluded.national_holidays, updated_at = now()
        returning id`,
       [
         config.slug,
@@ -122,6 +198,10 @@ export async function upsertClinic(
         config.extra_info ?? null,
         config.team.alert_whatsapp ?? null,
         config.team.alert_template ?? null,
+        config.scheduling.slot_step_minutes,
+        config.scheduling.min_advance_minutes,
+        config.scheduling.max_advance_days,
+        config.holidays.national,
       ],
     );
     const clinicId = clinic.rows[0]!.id;
@@ -135,8 +215,81 @@ export async function upsertClinic(
       await tx.query(`insert into insurance_plans (clinic_id, name) values ($1, $2) on conflict do nothing`, [clinicId, name]);
     }
 
+    await replaceProfessionals(tx, clinicId, config);
+    await tx.query(`delete from holidays where clinic_id = $1`, [clinicId]);
+    for (const entry of config.holidays.dates) {
+      const holiday = typeof entry === "string" ? { date: entry, name: undefined } : entry;
+      await tx.query(`insert into holidays (clinic_id, date, name) values ($1, $2, $3) on conflict do nothing`, [
+        clinicId,
+        holiday.date,
+        holiday.name ?? null,
+      ]);
+    }
+    await replaceBlocks(tx, clinicId, config);
+
     return { clinicId, channelId };
   });
+}
+
+/** Profissionais são atualizados pela key; os que saíram do arquivo ficam inativos. */
+async function replaceProfessionals(tx: Queryable, clinicId: string, config: ClinicConfig): Promise<void> {
+  for (const [index, professional] of config.professionals.entries()) {
+    const { rows } = await tx.query<{ id: string }>(
+      `insert into professionals (clinic_id, key, name, google_calendar_id, sort_order, active)
+       values ($1, $2, $3, $4, $5, $6)
+       on conflict (clinic_id, key) do update set
+         name = excluded.name, google_calendar_id = excluded.google_calendar_id,
+         sort_order = excluded.sort_order, active = excluded.active, updated_at = now()
+       returning id`,
+      [clinicId, professional.key, professional.name, professional.google_calendar_id ?? null, index, professional.active],
+    );
+    const professionalId = rows[0]!.id;
+
+    await tx.query(`delete from professional_services where professional_id = $1`, [professionalId]);
+    if (professional.services) {
+      await tx.query(
+        `insert into professional_services (professional_id, service_id)
+         select $1, id from services where clinic_id = $2 and key = any($3::text[])`,
+        [professionalId, clinicId, professional.services],
+      );
+    }
+
+    await tx.query(`delete from professional_hours where professional_id = $1`, [professionalId]);
+    for (const [day, ranges] of Object.entries(professional.hours ?? {})) {
+      for (const range of ranges ?? []) {
+        const [starts, ends] = range.split("-");
+        await tx.query(`insert into professional_hours (professional_id, weekday, starts_at, ends_at) values ($1, $2, $3, $4)`, [
+          professionalId,
+          WEEKDAYS.indexOf(day as WeekdayKey),
+          starts,
+          ends,
+        ]);
+      }
+    }
+  }
+  await tx.query(
+    `update professionals set active = false, updated_at = now() where clinic_id = $1 and not (key = any($2::text[]))`,
+    [clinicId, config.professionals.map((p) => p.key)],
+  );
+}
+
+async function replaceBlocks(tx: Queryable, clinicId: string, config: ClinicConfig): Promise<void> {
+  await tx.query(`delete from schedule_blocks where clinic_id = $1`, [clinicId]);
+  for (const block of config.blocks) {
+    const [startDate, startTime] = block.start.split("T") as [string, string];
+    const [endDate, endTime] = block.end.split("T") as [string, string];
+    await tx.query(
+      `insert into schedule_blocks (clinic_id, professional_id, starts_at, ends_at, reason)
+       values ($1, (select id from professionals where clinic_id = $1 and key = $2), $3, $4, $5)`,
+      [
+        clinicId,
+        block.professional ?? null,
+        fromLocal(startDate, startTime, config.timezone),
+        fromLocal(endDate, endTime, config.timezone),
+        block.reason ?? null,
+      ],
+    );
+  }
 }
 
 async function upsertChannel(tx: Queryable, clinicId: string, config: ClinicConfig, ciphertext: string): Promise<string> {

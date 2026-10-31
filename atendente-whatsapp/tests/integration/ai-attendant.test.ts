@@ -48,7 +48,7 @@ describe("atendente com IA", () => {
 
     const system = request.system as Array<{ text: string; cache_control?: unknown }>;
     expect(system[0]!.cache_control).toEqual({ type: "ephemeral" });
-    expect(system[0]!.text).toContain("Avaliação fisioterapêutica: R$");
+    expect(system[0]!.text).toContain("Avaliação fisioterapêutica [avaliacao]: R$");
 
     const messages = request.messages;
     expect(messages[0]).toEqual({ role: "user", content: "quanto custa a avaliação?" });

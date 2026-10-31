@@ -11,6 +11,13 @@ export interface ServiceInfo {
   durationMinutes: number;
 }
 
+export interface ProfessionalInfo {
+  key: string;
+  name: string;
+  /** Keys dos serviços que atende; null = todos. */
+  serviceKeys: string[] | null;
+}
+
 export interface BusinessHoursRange {
   /** 0 = domingo ... 6 = sábado */
   weekday: number;
@@ -34,6 +41,9 @@ export interface ClinicProfile {
   services: ServiceInfo[];
   businessHours: BusinessHoursRange[];
   insurancePlans: string[];
+  professionals: ProfessionalInfo[];
+  /** Há profissionais e serviços: o atendente consulta e marca horários. */
+  schedulingEnabled: boolean;
 }
 
 export async function loadClinicProfile(db: Queryable, clinicId: string): Promise<ClinicProfile | null> {
@@ -58,7 +68,7 @@ export async function loadClinicProfile(db: Queryable, clinicId: string): Promis
   const row = clinic.rows[0];
   if (!row) return null;
 
-  const [services, hours, plans] = await Promise.all([
+  const [services, hours, plans, professionals] = await Promise.all([
     db.query<{
       key: string;
       name: string;
@@ -77,6 +87,14 @@ export async function loadClinicProfile(db: Queryable, clinicId: string): Promis
       [clinicId],
     ),
     db.query<{ name: string }>(`select name from insurance_plans where clinic_id = $1 order by name`, [clinicId]),
+    db.query<{ key: string; name: string; service_keys: string[] | null }>(
+      `select p.key, p.name,
+              (select array_agg(s.key order by s.sort_order) from professional_services ps
+                 join services s on s.id = ps.service_id
+                where ps.professional_id = p.id and s.active) as service_keys
+       from professionals p where p.clinic_id = $1 and p.active order by p.sort_order, p.name`,
+      [clinicId],
+    ),
   ]);
 
   return {
@@ -101,6 +119,8 @@ export async function loadClinicProfile(db: Queryable, clinicId: string): Promis
     })),
     businessHours: hours.rows.map((h) => ({ weekday: Number(h.weekday), opensAt: h.opens_at, closesAt: h.closes_at })),
     insurancePlans: plans.rows.map((p) => p.name),
+    professionals: professionals.rows.map((p) => ({ key: p.key, name: p.name, serviceKeys: p.service_keys })),
+    schedulingEnabled: professionals.rows.length > 0 && services.rows.length > 0,
   };
 }
 

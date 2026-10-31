@@ -8,6 +8,9 @@ import { loadClinicProfile } from "../../src/clinics/profile.js";
 import { placeholderResponder, type Responder } from "../../src/conversations/responder.js";
 import type { Db } from "../../src/db/db.js";
 import { DELIVER_STAFF_ALERT, PROCESS_CONVERSATION } from "../../src/queue/jobs.js";
+import { createCalendarSyncHandler } from "../../src/scheduling/calendar-sync.js";
+import type { CalendarClient } from "../../src/scheduling/google-calendar.js";
+import { SYNC_CALENDAR, type SchedulingDeps } from "../../src/scheduling/service.js";
 import { createAlertDeliveryHandler } from "../../src/team/alerts.js";
 import { createWorker, type Worker } from "../../src/queue/worker.js";
 import { createWhatsAppClient } from "../../src/whatsapp/client.js";
@@ -23,6 +26,7 @@ export interface Harness {
   worker: Worker;
   graph: ReturnType<typeof createFakeGraphApi>;
   claude: ReturnType<typeof createFakeClaude>;
+  scheduling: SchedulingDeps;
   clinicId: string;
   /** Envia um payload assinado ao webhook, como a Meta faria. */
   postWebhook(payload: unknown, options?: { signature?: string | null }): Promise<LightMyRequestResponse>;
@@ -62,6 +66,8 @@ export interface HarnessOptions {
   createMessage?: CreateMessage;
   model?: string;
   effort?: Effort;
+  /** Google Calendar falso (ou real); padrão: sem Google. */
+  calendar?: CalendarClient | null;
 }
 
 export async function createHarness(options: HarnessOptions = {}): Promise<Harness> {
@@ -83,6 +89,15 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
     sleep: async () => undefined,
   });
 
+  const scheduling: SchedulingDeps = {
+    db,
+    calendar: options.calendar ?? null,
+    logger: silentLogger,
+    now: options.now ?? (() => new Date()),
+    holdMinutes: 20,
+    jobMaxAttempts: 3,
+  };
+
   const responder =
     options.responder === "claude"
       ? createClaudeResponder({
@@ -98,6 +113,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
           maxCallsPerConversationPerHour: options.maxCallsPerConversationPerHour ?? 30,
           maxCallsPerClinicPerDay: 3000,
           jobMaxAttempts: 3,
+          scheduling,
           ...(options.now ? { now: options.now } : {}),
         })
       : (options.responder ?? placeholderResponder);
@@ -118,6 +134,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
         logger: silentLogger,
       }),
       [DELIVER_STAFF_ALERT]: createAlertDeliveryHandler({ db, whatsapp, encryptionKey: ENCRYPTION_KEY, logger: silentLogger }),
+      [SYNC_CALENDAR]: createCalendarSyncHandler({ db, calendar: options.calendar ?? null, logger: silentLogger }),
     },
   });
 
@@ -140,6 +157,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
     worker,
     graph,
     claude,
+    scheduling,
     clinicId,
     postWebhook(payload, postOptions = {}) {
       const body = JSON.stringify(payload);

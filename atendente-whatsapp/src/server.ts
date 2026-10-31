@@ -8,6 +8,9 @@ import { createPostgresDb } from "./db/db.js";
 import { createLogger } from "./lib/logger.js";
 import { DELIVER_STAFF_ALERT, PROCESS_CONVERSATION } from "./queue/jobs.js";
 import { createWorker } from "./queue/worker.js";
+import { createCalendarSyncHandler } from "./scheduling/calendar-sync.js";
+import { createGoogleCalendarClient, parseServiceAccount } from "./scheduling/google-calendar.js";
+import { SYNC_CALENDAR, type SchedulingDeps } from "./scheduling/service.js";
 import { createAlertDeliveryHandler } from "./team/alerts.js";
 import { createWhatsAppClient } from "./whatsapp/client.js";
 
@@ -27,6 +30,20 @@ const whatsapp = createWhatsAppClient({
   logger,
 });
 
+const calendar = env.GOOGLE_SERVICE_ACCOUNT_JSON
+  ? createGoogleCalendarClient({ serviceAccount: parseServiceAccount(env.GOOGLE_SERVICE_ACCOUNT_JSON), logger })
+  : null;
+if (!calendar) logger.warn("GOOGLE_SERVICE_ACCOUNT_JSON não definida: agenda funciona só com o banco, sem Google Calendar");
+
+const scheduling: SchedulingDeps = {
+  db,
+  calendar,
+  logger,
+  now: () => new Date(),
+  holdMinutes: env.SCHEDULING_HOLD_MINUTES,
+  jobMaxAttempts: env.JOB_MAX_ATTEMPTS,
+};
+
 const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, timeout: env.AI_TIMEOUT_MS, maxRetries: 2 });
 
 const responder = createClaudeResponder({
@@ -42,6 +59,7 @@ const responder = createClaudeResponder({
   maxCallsPerConversationPerHour: env.AI_MAX_CALLS_PER_CONVERSATION_PER_HOUR,
   maxCallsPerClinicPerDay: env.AI_MAX_CALLS_PER_CLINIC_PER_DAY,
   jobMaxAttempts: env.JOB_MAX_ATTEMPTS,
+  scheduling,
 });
 
 const worker = createWorker({
@@ -59,6 +77,7 @@ const worker = createWorker({
       logger,
     }),
     [DELIVER_STAFF_ALERT]: createAlertDeliveryHandler({ db, whatsapp, encryptionKey: env.ENCRYPTION_KEY, logger }),
+    [SYNC_CALENDAR]: createCalendarSyncHandler({ db, calendar, logger }),
   },
 });
 

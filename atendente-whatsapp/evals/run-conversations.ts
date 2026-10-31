@@ -27,6 +27,7 @@ const caseSchema = z.strictObject({
     alerts_any: z.array(z.string()).optional(),
     no_alerts: z.array(z.string()).optional(),
     max_chars: z.number().optional(),
+    appointments: z.array(z.string()).optional(),
     judge: z.string().optional(),
   }),
 });
@@ -78,15 +79,26 @@ interface Result {
   outputTokens: number;
 }
 
+/** Agenda usada por todos os casos (pode ser sobrescrita em `clinic`). */
+const EVAL_SCHEDULE = {
+  professionals: [
+    { key: "ana", name: "Dra. Ana Lima" },
+    { key: "joao", name: "Dr. João Prado", services: ["sessao"], hours: { tue: ["13:00-19:00"] } },
+  ],
+  scheduling: { slot_step_minutes: 60, min_advance_minutes: 120, max_advance_days: 30 },
+};
+const DEFAULT_NOW = "2026-10-28T10:00:00-03:00";
+
 async function runCase(testCase: Case, run: number): Promise<Result> {
-  const now = testCase.now ? () => new Date(testCase.now!) : undefined;
+  const fixedNow = new Date(testCase.now ?? DEFAULT_NOW);
+  const now = () => fixedNow;
   const h = await createHarness({
     responder: "claude",
     createMessage: (params) => client.beta.messages.create(params),
     model,
     effort,
-    clinic: (testCase.clinic ?? {}) as Partial<ClinicConfigInput>,
-    ...(now ? { now } : {}),
+    clinic: { ...EVAL_SCHEDULE, ...(testCase.clinic ?? {}) } as Partial<ClinicConfigInput>,
+    now,
   });
   const clinicName = (testCase.clinic?.name as string | undefined) ?? TEST_CLINIC.name;
   const transcript: string[] = [];
@@ -119,6 +131,12 @@ async function runCase(testCase: Case, run: number): Promise<Result> {
     const alertKinds = (await h.db.query<{ kind: string }>("select kind from staff_alerts")).rows.map((r) => r.kind);
     if (e.alerts_any && !e.alerts_any.some((kind) => alertKinds.includes(kind))) {
       failures.push(`deveria alertar a equipe com um de: ${e.alerts_any.join(", ")} (alertas: ${alertKinds.join(", ") || "nenhum"})`);
+    }
+    if (e.appointments) {
+      const statuses = (await h.db.query<{ status: string }>("select status from appointments order by created_at")).rows.map((r) => r.status);
+      if (JSON.stringify(statuses) !== JSON.stringify(e.appointments)) {
+        failures.push(`agendamentos: esperado [${e.appointments.join(", ")}], ficou [${statuses.join(", ")}]`);
+      }
     }
     for (const kind of e.no_alerts ?? []) {
       if (alertKinds.includes(kind)) failures.push(`não deveria criar alerta ${kind}`);

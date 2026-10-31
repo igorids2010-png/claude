@@ -25,6 +25,8 @@ const profile: ClinicProfile = {
     { weekday: 6, opensAt: "08:00", closesAt: "12:00" },
   ],
   insurancePlans: ["Unimed"],
+  professionals: [],
+  schedulingEnabled: false,
 };
 
 describe("prompt de sistema", () => {
@@ -32,16 +34,16 @@ describe("prompt de sistema", () => {
 
   it("traz os fatos da clínica com preço formatado em reais", () => {
     expect(prompt).toContain("Clínica Movimento");
-    expect(prompt).toMatch(/Avaliação: R\$\s?150,00; duração de 50 min/);
-    expect(prompt).toMatch(/Pacote 10 sessões: a partir de R\$\s?999,90/);
+    expect(prompt).toMatch(/Avaliação \[avaliacao\]: R\$\s?150,00; duração de 50 min/);
+    expect(prompt).toMatch(/Pacote 10 sessões \[pacote\]: a partir de R\$\s?999,90/);
     expect(prompt).toContain("Turmas de até 3 pessoas");
     expect(prompt).toContain("Convênios aceitos: Unimed.");
     expect(prompt).toContain("Cancelar com 24h de antecedência.");
   });
 
   it("serviço sem preço aparece como valor não divulgado, nunca como zero", () => {
-    expect(prompt).toContain("Pilates: valor não divulgado aqui (a equipe informa)");
-    expect(prompt).not.toMatch(/Pilates: R\$/);
+    expect(prompt).toContain("Pilates [pilates]: valor não divulgado aqui (a equipe informa)");
+    expect(prompt).not.toMatch(/Pilates \[pilates\]: R\$/);
   });
 
   it("marca como 'não informado' o que a clínica não configurou", () => {

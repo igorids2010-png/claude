@@ -12,7 +12,8 @@ import { createAlert, hasRecentAlert, type AlertKind } from "../team/alerts.js";
 import { loadHistory, type HistoryOptions } from "./history.js";
 import { buildSystemPrompt, buildTurnContext } from "./prompt.js";
 import { detectEmergency, emergencyText, replyCoversEmergency } from "./safety.js";
-import { runTool, TOOLS } from "./tools.js";
+import { pendingActionsFor, type SchedulingDeps } from "../scheduling/service.js";
+import { runTool, toolsFor } from "./tools.js";
 import { recordUsage, usageCounts } from "./usage.js";
 
 export type CreateMessage = (params: MessageCreateParamsNonStreaming) => Promise<BetaMessage>;
@@ -32,6 +33,8 @@ export interface ClaudeResponderOptions {
   maxCallsPerConversationPerHour: number;
   maxCallsPerClinicPerDay: number;
   jobMaxAttempts: number;
+  /** Agenda (Fase 3). null = clínicas sem agenda conectada. */
+  scheduling: SchedulingDeps | null;
   now?: () => Date;
 }
 
@@ -100,11 +103,14 @@ export function createClaudeResponder(options: ClaudeResponderOptions): Responde
 
       const history = await loadHistory(options.db, context.conversationId, options.history);
       if (history.length === 0) return [];
+      const pendingActions =
+        profile.schedulingEnabled && options.scheduling ? await pendingActionsFor(options.scheduling, context.conversationId) : [];
       const messages: BetaMessageParam[] = [
         ...history,
-        { role: "system", content: buildTurnContext(now(), profile.timezone, { firstReply: context.firstReply }) },
+        { role: "system", content: buildTurnContext(now(), profile.timezone, { firstReply: context.firstReply, pendingActions }) },
       ];
       const system = buildSystemPrompt(profile);
+      const tools = toolsFor(profile);
 
       let reply = "";
       try {
@@ -113,7 +119,7 @@ export function createClaudeResponder(options: ClaudeResponderOptions): Responde
             model: options.model,
             max_tokens: options.maxTokens,
             system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
-            tools: TOOLS,
+            tools,
             tool_choice: { type: "auto" },
             output_config: { effort: options.effort },
             messages,
@@ -150,6 +156,7 @@ export function createClaudeResponder(options: ClaudeResponderOptions): Responde
               conversationId: context.conversationId,
               sourceMessageId: context.sourceMessageId,
               jobMaxAttempts: options.jobMaxAttempts,
+              scheduling: profile.schedulingEnabled ? options.scheduling : null,
             });
             log.info({ tool: block.name, isError: outcome.isError }, "ferramenta executada");
             results.push({ type: "tool_result", tool_use_id: block.id, content: outcome.content, is_error: outcome.isError });

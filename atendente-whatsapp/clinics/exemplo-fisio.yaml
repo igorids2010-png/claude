@@ -73,3 +73,35 @@ extra_info: |
   Estacionamento conveniado no prédio ao lado (1h grátis).
   A clínica tem acesso para cadeira de rodas e elevador.
   Venha com roupa confortável.
+
+# --- Agenda (Fase 3) ----------------------------------------------------------------------
+# Sem profissionais, o atendente não marca horários: ele anota o pedido e avisa a equipe.
+professionals:
+  - key: ana
+    name: Dra. Ana Lima
+    # Agenda do Google da profissional, compartilhada com o e-mail da conta de serviço
+    # (permissão "Fazer alterações nos eventos"). Geralmente é o próprio e-mail dela.
+    google_calendar_id: ana.lima@gmail.com
+    # Sem "services": atende todos. Sem "hours": segue o horário da clínica.
+  - key: joao
+    name: Dr. João Prado
+    google_calendar_id: joao.prado@gmail.com
+    services: [sessao, pacote-10]
+    hours:
+      tue: ["13:00-19:00"]
+      thu: ["13:00-19:00"]
+
+scheduling:
+  slot_step_minutes: 30     # grade dos horários oferecidos: 08:00, 08:30, 09:00...
+  min_advance_minutes: 120  # não marca para daqui a menos de 2 horas
+  max_advance_days: 60      # oferece horários até 60 dias à frente
+
+holidays:
+  national: true            # feriados nacionais automáticos (inclui Sexta-feira Santa)
+  dates:                    # feriados municipais/estaduais, emendas, dias sem atendimento
+    - { date: "2026-12-08", name: Nossa Senhora da Conceição (Campinas) }
+    - "2026-12-24"
+    - "2026-12-31"
+
+blocks:                     # períodos sem atendimento; sem "professional" = clínica toda
+  - { start: "2027-01-04T08:00", end: "2027-01-08T19:00", professional: ana, reason: Férias }

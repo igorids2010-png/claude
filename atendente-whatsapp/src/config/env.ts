@@ -38,6 +38,11 @@ const envSchema = z.object({
   AI_MAX_CALLS_PER_CONVERSATION_PER_HOUR: z.coerce.number().int().positive().default(30),
   AI_MAX_CALLS_PER_CLINIC_PER_DAY: z.coerce.number().int().positive().default(3000),
 
+  /** JSON da chave da conta de serviço do Google (puro ou em base64). Vazio = sem Google Calendar. */
+  GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  /** Minutos que um horário proposto fica reservado esperando a confirmação do paciente. */
+  SCHEDULING_HOLD_MINUTES: z.coerce.number().int().min(1).max(240).default(20),
+
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
   JOB_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),

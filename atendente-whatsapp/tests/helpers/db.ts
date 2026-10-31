@@ -1,5 +1,6 @@
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
+import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
 import type { Db, Queryable } from "../../src/db/db.js";
 import { runMigrations } from "../../src/db/migrate.js";
 
@@ -19,7 +20,7 @@ export async function resetTestDb(db: Db): Promise<void> {
 }
 
 async function createTestDb(): Promise<Db> {
-  const pg = new PGlite();
+  const pg = new PGlite({ extensions: { btree_gist } });
   const wrap = (target: Pick<PGlite, "query">): Queryable => ({
     async query<T>(sql: string, params: unknown[] = []) {
       const result = await target.query<T>(sql, params);

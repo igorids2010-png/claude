@@ -3,9 +3,8 @@
 Sistema multi-clínica: o mesmo servidor atende várias clínicas, cada uma com seu número
 de WhatsApp (WhatsApp Cloud API oficial da Meta), sua configuração e sua agenda.
 
-> **Status: Fases 1 e 2 concluídas** (webhook, fila e atendente com IA).
-> Próximas fases: agendamento com Google Calendar, transferência para humano, lembretes e o
-> painel da clínica.
+> **Status: Fases 1, 2 e 3 concluídas** (webhook, fila, atendente com IA e agendamento com
+> Google Calendar). Próximas fases: transferência para humano, lembretes e o painel da clínica.
 
 ## Como funciona
 
@@ -61,6 +60,26 @@ O worker monta a resposta com o **Claude** (`claude-fable-5-1` por padrão, conf
 - **Alertas para a equipe** vão por WhatsApp para `team.alert_whatsapp`, num job próprio com
   retentativas. Fora da janela de 24h da recepção, usa o template `team.alert_template` (se houver).
 
+### Agendamento (Fase 3)
+
+Com profissionais cadastrados, o atendente consulta, marca, remarca e cancela horários:
+
+- **Horários livres** respeitam o horário da clínica e de cada profissional, a duração de cada
+  serviço, o intervalo de preparo depois do atendimento, feriados (nacionais automáticos, inclusive
+  a Sexta-feira Santa, mais os da clínica), bloqueios, antecedência mínima e limite de dias à frente.
+- **Google Calendar por profissional** (conta de serviço): compromissos na agenda do profissional
+  bloqueiam horários, e cada agendamento vira um evento na agenda dele (apagado ao cancelar ou
+  remarcar). Se o Google estiver fora do ar, o atendente não oferece horários incertos: avisa
+  que a equipe confirma.
+- **Confirmação em duas etapas**: `propose_booking` reserva o horário por 20 minutos e devolve o
+  resumo; `confirm_pending_action` só funciona a partir de uma mensagem do paciente posterior à
+  proposta. A IA não consegue marcar sem o "sim" do paciente, nem por engano.
+- **Sem conflito de horário**: além da checagem na consulta, uma *exclusion constraint* do Postgres
+  recusa dois horários sobrepostos do mesmo profissional, mesmo com dois pacientes marcando no mesmo
+  instante. Na confirmação, a agenda do Google é consultada de novo.
+- **Remarcação atômica**: cancela o antigo e cria o novo na mesma transação.
+- Cada paciente só vê e altera os próprios agendamentos (pelo número de WhatsApp).
+
 ## Estrutura
 
 ```
@@ -70,6 +89,7 @@ src/
   config/env.ts          variáveis de ambiente validadas com Zod
   http/webhook.ts        GET de verificação e POST de recebimento
   ai/                    prompt, histórico, ferramentas, rede de segurança, responder do Claude
+  scheduling/            horários livres, feriados, agendamentos, Google Calendar
   team/                  alertas para a equipe da clínica
   whatsapp/              assinatura, schema do payload, cliente da Graph API (retry/backoff)
   conversations/         ingest (gravação idempotente), processor (respostas), textos
@@ -110,7 +130,9 @@ Os testes de integração rodam as migrations reais num Postgres em memória (PG
 Graph API e um Claude simulados. Cobrem: assinatura, verificação do webhook, idempotência,
 debounce, mídias, retry sem duplicar envio, janela de 24h, job travado, concorrência, isolamento
 entre clínicas, montagem da requisição ao Claude, loop de ferramentas, alertas, emergência, falha e
-recusa da IA, limites de uso e registro de tokens.
+recusa da IA, limites de uso, registro de tokens, regras de agenda (expediente, almoço, duração,
+intervalo, feriados, bloqueios, antecedência), conflito de horário (inclusive simultâneo),
+confirmação em duas etapas, expiração de reserva, remarcação, cancelamento e Google Calendar.
 
 ### Suíte de conversas difíceis (Claude de verdade)
 
@@ -122,7 +144,7 @@ npm run eval:conversations -- --only emergencia-medica --repeat 3
 Precisa de `ANTHROPIC_API_KEY` (custa alguns centavos por rodada). Os casos estão em
 `evals/conversations.yaml`: pergunta de preço, preço não divulgado, serviço inexistente, pedido de
 diagnóstico e remédio, emergência, risco de suicídio, paciente irritado, pedido de atendente,
-remarcação, fora do horário, erros de digitação, mensagens confusas, tentativa de manipulação,
+remarcação, agendamento com confirmação, dia fechado, fora do horário, erros de digitação, mensagens confusas, tentativa de manipulação,
 convênio não aceito, exclusão de dados e emergência veterinária. Cada caso tem verificações
 objetivas (ex.: "contém 192", "criou alerta de emergência") e um critério avaliado por um segundo
 modelo (`EVAL_JUDGE_MODEL`, padrão `claude-opus-5-5`). Rode sempre que mudar o prompt ou o modelo.
@@ -150,6 +172,22 @@ Para atender pacientes reais (número próprio da clínica, sem limite de destin
 **verificar o Business** na Meta e adicionar o número da clínica. Os detalhes entram no checklist
 final do projeto.
 
+## Configurando o Google Calendar (conta de serviço)
+
+1. Em <https://console.cloud.google.com>, crie um projeto (ex.: "atendente-whatsapp").
+2. Em **APIs e serviços > Biblioteca**, ative a **Google Calendar API**.
+3. Em **IAM e administrador > Contas de serviço**, crie uma conta (ex.: `agenda`). Não precisa
+   dar papéis no projeto.
+4. Na conta criada, aba **Chaves > Adicionar chave > JSON**. Guarde o arquivo baixado com cuidado:
+   ele dá acesso às agendas compartilhadas.
+5. Coloque o conteúdo em `GOOGLE_SERVICE_ACCOUNT_JSON` (pode ser em base64: `base64 -w0 chave.json`).
+6. Para cada profissional: no Google Calendar dele, **Configurações da agenda > Compartilhar com
+   pessoas específicas**, adicione o e-mail da conta de serviço (`agenda@<projeto>.iam.gserviceaccount.com`)
+   com a permissão **Fazer alterações nos eventos**. O ID da agenda (geralmente o e-mail do
+   profissional) vai em `google_calendar_id` no YAML da clínica.
+
+Uma única conta de serviço atende todas as clínicas: cada profissional só compartilha a própria agenda.
+
 ## Cadastrando uma clínica
 
 Copie `clinics/exemplo-fisio.yaml`, ajuste e rode:
@@ -163,7 +201,9 @@ lido da variável de ambiente indicada em `whatsapp.access_token_env` e salvo cr
 
 O arquivo de exemplo documenta todos os campos: serviços (`price` em reais; sem `price`, o
 atendente diz que a equipe informa), horários por dia (`mon` ... `sun`, vários intervalos),
-convênios, políticas, informações extras e o WhatsApp da recepção para alertas. Campos com nome
+convênios, políticas, informações extras, o WhatsApp da recepção para alertas e a agenda:
+profissionais (serviços que atendem, horário próprio, agenda do Google), grade de horários,
+antecedência, feriados e bloqueios. Campos com nome
 errado são recusados, para um erro de digitação não passar despercebido.
 
 ## Custos da IA

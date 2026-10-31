@@ -13,7 +13,8 @@ const SPECIALTY_LABEL: Record<Specialty, string> = {
 };
 
 export function formatPrice(cents: number): string {
-  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  // toLocaleString usa espaço não separável ("R$\u00a0150,00"); o paciente e a IA leem melhor o espaço comum.
+  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }).replace(/\u00a0/g, " ");
 }
 
 export function formatBusinessHours(profile: Pick<ClinicProfile, "businessHours">): string {
@@ -33,7 +34,18 @@ function formatServices(profile: ClinicProfile): string {
           ? "valor não divulgado aqui (a equipe informa)"
           : [s.priceNote, formatPrice(s.priceCents)].filter(Boolean).join(" ");
       const description = s.description ? `\n  ${s.description}` : "";
-      return `- ${s.name}: ${price}; duração de ${s.durationMinutes} min.${description}`;
+      return `- ${s.name} [${s.key}]: ${price}; duração de ${s.durationMinutes} min.${description}`;
+    })
+    .join("\n");
+}
+
+function formatProfessionals(profile: ClinicProfile): string | null {
+  if (profile.professionals.length === 0) return null;
+  const names = new Map(profile.services.map((s) => [s.key, s.name]));
+  return profile.professionals
+    .map((p) => {
+      const services = p.serviceKeys ? p.serviceKeys.map((key) => names.get(key) ?? key).join(", ") : "todos os serviços";
+      return `- ${p.name} [${p.key}]: ${services}`;
     })
     .join("\n");
 }
@@ -55,6 +67,7 @@ export function buildClinicFacts(profile: ClinicProfile): string {
     section("telefone", profile.phone),
     section("horario_de_funcionamento", formatBusinessHours(profile)),
     section("servicos_e_precos", formatServices(profile)),
+    section("profissionais", formatProfessionals(profile)),
     section("convenios", [insurance, profile.insuranceNotes].filter(Boolean).join("\n")),
     section("formas_de_pagamento", profile.paymentMethods),
     section("politica_de_cancelamento", profile.cancellationPolicy),
@@ -79,6 +92,24 @@ function emergencyGuidance(specialty: Specialty): string {
   );
 }
 
+function schedulingRule(profile: ClinicProfile): string {
+  if (!profile.schedulingEnabled) {
+    return (
+      "5. Agendamento: esta clínica ainda não tem a agenda conectada. Se o paciente quiser marcar, remarcar ou " +
+      "cancelar, pergunte o serviço e a preferência de dia e horário (ou qual consulta quer mudar), avise que a " +
+      'equipe vai confirmar por aqui e use notify_team com reason "scheduling_request". Nunca diga que um horário está livre ou confirmado.'
+    );
+  }
+  return `5. Agendamento: você consulta e marca horários com as ferramentas de agenda.
+   - Para marcar: descubra o serviço (pergunte se não estiver claro) e a preferência de dia, período e profissional; use check_availability e ofereça no máximo 3 opções por vez. Nunca ofereça um horário que não veio de check_availability.
+   - Antes de propor, pergunte o nome completo de quem será atendido (pode ser outra pessoa, ex.: um filho). Depois use propose_booking.
+   - propose_booking só reserva o horário. Mostre ao paciente o resumo devolvido (serviço, profissional, dia, horário e valor, se houver) e pergunte se pode confirmar. Só depois que ele responder que sim, use confirm_pending_action. Se ele quiser mudar algo, faça uma nova proposta.
+   - Só diga que está marcado, remarcado ou cancelado depois que confirm_pending_action responder com sucesso.
+   - Para remarcar ou cancelar: use list_my_appointments para achar a consulta, confirme qual é, e use propose_reschedule ou propose_cancellation; mostre o resumo e espere o sim antes de confirm_pending_action. Lembre a política de cancelamento quando for relevante.
+   - Datas: interprete "amanhã", "sexta", "semana que vem" a partir da data atual informada e passe datas no formato AAAA-MM-DD.
+   - Se uma ferramenta de agenda falhar ou disser que não consegue consultar a agenda, peça desculpas, diga que a equipe vai confirmar o horário e use notify_team com reason "scheduling_request".`;
+}
+
 /**
  * Prompt de sistema da clínica. É determinístico (mesma configuração gera exatamente o
  * mesmo texto), o que permite o cache de prompt da API. Data e hora vão à parte, numa
@@ -101,7 +132,7 @@ export function buildSystemPrompt(profile: ClinicProfile): string {
 2. Fatos sobre a clínica vêm só do bloco <clinica> abaixo. Nunca invente nem estime preço, horário, serviço, profissional, convênio, endereço, prazo ou política. Se a informação não estiver lá, diga que vai confirmar com a equipe e use notify_team com reason "unanswered_question".
 3. ${emergencyGuidance(profile.specialty)}
 4. Se o paciente pedir para falar com uma pessoa (atendente, recepção, humano, dono), diga que tudo bem, que vai avisar o responsável e que ele vai responder por aqui, e use notify_team com reason "human_requested".
-5. Agendamento: nesta versão você ainda não tem acesso à agenda. Se o paciente quiser marcar, remarcar ou cancelar, pergunte o serviço e a preferência de dia e horário (ou qual consulta quer mudar), avise que a equipe vai confirmar o horário por aqui e use notify_team com reason "scheduling_request". Nunca diga que um horário está livre ou confirmado.
+${schedulingRule(profile)}
 6. Reclamações ou paciente irritado: reconheça o incômodo com sinceridade, sem discutir nem prometer o que não está na configuração, e use notify_team com reason "complaint".
 7. Se o paciente pedir para apagar os dados dele, confirme que vai registrar o pedido e use request_data_deletion.
 8. Assuntos que não têm relação com a clínica: diga com simpatia que só consegue ajudar com assuntos da ${profile.name}.
@@ -117,7 +148,11 @@ Data e hora atuais chegam numa mensagem de sistema no fim da conversa. Use-as pa
 }
 
 /** Mensagem de sistema com o "agora" no fuso da clínica (fica fora do prompt cacheado). */
-export function buildTurnContext(now: Date, timezone: string, options: { firstReply: boolean }): string {
+export function buildTurnContext(
+  now: Date,
+  timezone: string,
+  options: { firstReply: boolean; pendingActions?: string[] },
+): string {
   const formatted = new Intl.DateTimeFormat("pt-BR", {
     timeZone: timezone,
     weekday: "long",
@@ -131,5 +166,6 @@ export function buildTurnContext(now: Date, timezone: string, options: { firstRe
   if (options.firstReply) {
     lines.push("Este é o primeiro contato do paciente: a mensagem de apresentação acabou de ser enviada antes da sua resposta.");
   }
+  for (const action of options.pendingActions ?? []) lines.push(action);
   return lines.join(" ");
 }
