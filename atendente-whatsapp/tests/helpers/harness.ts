@@ -11,6 +11,7 @@ import { DELIVER_STAFF_ALERT, PROCESS_CONVERSATION } from "../../src/queue/jobs.
 import { createCalendarSyncHandler } from "../../src/scheduling/calendar-sync.js";
 import type { CalendarClient } from "../../src/scheduling/google-calendar.js";
 import { SYNC_CALENDAR, type SchedulingDeps } from "../../src/scheduling/service.js";
+import { createStaffCommandHandler, STAFF_COMMAND } from "../../src/handoff/staff.js";
 import { createAlertDeliveryHandler } from "../../src/team/alerts.js";
 import { createWorker, type Worker } from "../../src/queue/worker.js";
 import { createWhatsAppClient } from "../../src/whatsapp/client.js";
@@ -66,6 +67,7 @@ export interface HarnessOptions {
   createMessage?: CreateMessage;
   model?: string;
   effort?: Effort;
+  handoffAutoReleaseMs?: number;
   /** Google Calendar falso (ou real); padrão: sem Google. */
   calendar?: CalendarClient | null;
 }
@@ -132,7 +134,9 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
         responder,
         encryptionKey: ENCRYPTION_KEY,
         logger: silentLogger,
+        handoffAutoReleaseMs: options.handoffAutoReleaseMs ?? 12 * 60 * 60 * 1000,
       }),
+      [STAFF_COMMAND]: createStaffCommandHandler({ db, whatsapp, encryptionKey: ENCRYPTION_KEY, logger: silentLogger, jobMaxAttempts: 3 }),
       [DELIVER_STAFF_ALERT]: createAlertDeliveryHandler({ db, whatsapp, encryptionKey: ENCRYPTION_KEY, logger: silentLogger }),
       [SYNC_CALENDAR]: createCalendarSyncHandler({ db, calendar: options.calendar ?? null, logger: silentLogger }),
     },

@@ -11,6 +11,7 @@ import { createWorker } from "./queue/worker.js";
 import { createCalendarSyncHandler } from "./scheduling/calendar-sync.js";
 import { createGoogleCalendarClient, parseServiceAccount } from "./scheduling/google-calendar.js";
 import { SYNC_CALENDAR, type SchedulingDeps } from "./scheduling/service.js";
+import { createStaffCommandHandler, STAFF_COMMAND } from "./handoff/staff.js";
 import { createAlertDeliveryHandler } from "./team/alerts.js";
 import { createWhatsAppClient } from "./whatsapp/client.js";
 
@@ -75,6 +76,14 @@ const worker = createWorker({
       responder,
       encryptionKey: env.ENCRYPTION_KEY,
       logger,
+      handoffAutoReleaseMs: env.HANDOFF_AUTO_RELEASE_HOURS * 60 * 60 * 1000,
+    }),
+    [STAFF_COMMAND]: createStaffCommandHandler({
+      db,
+      whatsapp,
+      encryptionKey: env.ENCRYPTION_KEY,
+      logger,
+      jobMaxAttempts: env.JOB_MAX_ATTEMPTS,
     }),
     [DELIVER_STAFF_ALERT]: createAlertDeliveryHandler({ db, whatsapp, encryptionKey: env.ENCRYPTION_KEY, logger }),
     [SYNC_CALENDAR]: createCalendarSyncHandler({ db, calendar, logger }),

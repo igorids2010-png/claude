@@ -85,12 +85,13 @@ describe("processamento assíncrono das conversas", () => {
     expect(await h.worker.runOnce()).toBe(1);
   });
 
-  it("conversa em atendimento humano: bot fica em silêncio", async () => {
+  it("conversa em atendimento humano: bot fica em silêncio e a mensagem vai para a recepção", async () => {
     h = await createHarness();
     await h.postWebhook(webhookPayload({ messages: [textMessage("oi")] }));
     await h.db.query("update conversations set status = 'human'");
     await h.worker.runOnce();
-    expect(h.graph.calls).toHaveLength(0);
+    expect(h.graph.calls.filter((c) => c.body.to === PATIENT_WA_ID)).toHaveLength(0);
+    expect(h.graph.calls.filter((c) => c.body.to === "5511900001111")).toHaveLength(1);
     const handled = await h.db.query("select 1 from messages where handled_at is not null");
     expect(handled.rows).toHaveLength(1);
   });

@@ -12,6 +12,7 @@ import {
   SchedulingError,
   type SchedulingDeps,
 } from "../scheduling/service.js";
+import { startHandoff } from "../handoff/handoff.js";
 import { createAlert, type AlertKind } from "../team/alerts.js";
 
 export interface ToolContext {
@@ -25,14 +26,13 @@ export interface ToolContext {
   scheduling: SchedulingDeps | null;
 }
 
-const NOTIFY_REASONS = [
-  "emergency",
-  "human_requested",
-  "unanswered_question",
-  "scheduling_request",
-  "complaint",
-  "other",
-] as const satisfies readonly AlertKind[];
+const NOTIFY_REASONS = ["emergency", "unanswered_question", "scheduling_request", "other"] as const satisfies readonly AlertKind[];
+
+const TRANSFER_REASONS = ["patient_request", "frustrated", "out_of_scope", "unresolved", "other"] as const;
+const transferInput = z.strictObject({
+  reason: z.enum(TRANSFER_REASONS),
+  summary: z.string().min(3).max(1500),
+});
 
 const notifyTeamInput = z.strictObject({
   reason: z.enum(NOTIFY_REASONS),
@@ -43,9 +43,9 @@ const BASE_TOOLS: BetaTool[] = [
   {
     name: "notify_team",
     description:
-      "Avisa a equipe da clínica (recepção) pelo WhatsApp. Use em emergências, quando o paciente pedir " +
-      "atendimento humano, quando você não tiver a informação pedida, para pedidos de agendamento, " +
-      "remarcação ou cancelamento, e para reclamações. Depois de usar, diga ao paciente que a equipe foi avisada.",
+      "Avisa a equipe da clínica (recepção) pelo WhatsApp, sem tirar a conversa de você. Use em emergências, " +
+      "quando você não tiver a informação pedida e para pedidos de agenda que você não consegue fazer. " +
+      "Para passar a conversa para uma pessoa, use transfer_to_human.",
     strict: true,
     input_schema: {
       type: "object",
@@ -54,15 +54,41 @@ const BASE_TOOLS: BetaTool[] = [
           type: "string",
           enum: [...NOTIFY_REASONS],
           description:
-            "emergency: emergência ou risco; human_requested: pediu para falar com uma pessoa; " +
-            "unanswered_question: dúvida que os dados da clínica não respondem; scheduling_request: " +
-            "quer marcar, remarcar ou cancelar; complaint: reclamação ou paciente irritado; other: outro motivo.",
+            "emergency: emergência ou risco; unanswered_question: dúvida que os dados da clínica não respondem; " +
+            "scheduling_request: pedido de agenda que você não consegue concluir; other: outro motivo.",
         },
         summary: {
           type: "string",
           description:
             "Resumo curto e objetivo para a recepção, em português: o que o paciente quer ou relatou e os " +
             "detalhes úteis (serviço, dia e horário de preferência, nome se ele informou). Sem diagnósticos.",
+        },
+      },
+      required: ["reason", "summary"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "transfer_to_human",
+    description:
+      "Passa a conversa para a equipe da clínica: você para de responder este paciente, a recepção recebe o " +
+      "resumo e continua o atendimento por aqui. Use quando o paciente pedir uma pessoa, estiver irritado, o " +
+      "assunto fugir do que você resolve, ou depois de duas tentativas sem resolver. Depois, diga ao paciente " +
+      "que alguém da equipe vai continuar o atendimento.",
+    strict: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        reason: {
+          type: "string",
+          enum: [...TRANSFER_REASONS],
+          description:
+            "patient_request: pediu uma pessoa; frustrated: irritado ou reclamando; out_of_scope: assunto da clínica " +
+            "que você não resolve; unresolved: duas tentativas sem resolver; other: outro motivo.",
+        },
+        summary: {
+          type: "string",
+          description: "Resumo para a recepção: o que o paciente quer, detalhes já informados e o que já foi tentado.",
         },
       },
       required: ["reason", "summary"],
@@ -254,6 +280,8 @@ export interface ToolOutcome {
   isError: boolean;
   /** Tipos de alerta disparados (usado pela rede de segurança e nos testes). */
   alerts: AlertKind[];
+  /** A conversa foi passada para a equipe. */
+  transferred?: boolean;
 }
 
 export async function runTool(name: string, input: unknown, context: ToolContext): Promise<ToolOutcome> {
@@ -280,6 +308,30 @@ export async function runTool(name: string, input: unknown, context: ToolContext
       content: created ? "Equipe avisada." : "A equipe já tinha sido avisada sobre isso.",
       isError: false,
       alerts: [parsed.data.reason],
+    };
+  }
+
+  if (name === "transfer_to_human") {
+    const parsed = transferInput.safeParse(input);
+    if (!parsed.success) {
+      return { content: `Entrada inválida: ${parsed.error.issues[0]?.message ?? "erro"}`, isError: true, alerts: [] };
+    }
+    const { started } = await startHandoff(context.db, {
+      clinicId: context.clinicId,
+      conversationId: context.conversationId,
+      reason: parsed.data.reason,
+      summary: parsed.data.summary,
+      startedBy: "ai",
+      sourceMessageId: context.sourceMessageId,
+      jobMaxAttempts: context.jobMaxAttempts,
+    });
+    return {
+      content: started
+        ? "Conversa transferida: a equipe foi avisada e você não responderá mais este paciente até ela devolver a conversa."
+        : "A conversa já estava com a equipe.",
+      isError: false,
+      alerts: ["human_requested"],
+      transferred: true,
     };
   }
 

@@ -75,6 +75,33 @@ export function templateParam(text: string, max = 900): string {
   return text.replace(/[\n\t]+/g, " ").replace(/ {4,}/g, "   ").trim().slice(0, max);
 }
 
+/**
+ * Envia uma mensagem para a equipe. Fora da janela de 24h com aquele número (a recepção não
+ * escreveu para a clínica no último dia), a Meta só entrega template: usamos o configurado.
+ */
+export async function sendToStaff(
+  whatsapp: WhatsAppClient,
+  target: { phoneNumberId: string; accessToken: string },
+  staffWaId: string,
+  text: string,
+  template: string | null,
+): Promise<"text" | "template"> {
+  try {
+    await whatsapp.sendText(target, staffWaId, text);
+    return "text";
+  } catch (error) {
+    const windowClosed = error instanceof WhatsAppApiError && error.code === 131047;
+    if (!windowClosed || !template) throw error;
+    await whatsapp.sendTemplate(target, staffWaId, { name: template, languageCode: "pt_BR", bodyParams: [templateParam(text)] });
+    return "template";
+  }
+}
+
+/** Como responder ao paciente e devolver ao bot, incluído em todo alerta. */
+export function staffInstructions(code: string): string {
+  return `Para responder ao paciente, mande aqui: #${code} sua mensagem\nPara devolver ao atendente automático: #${code} /bot`;
+}
+
 interface AlertRow {
   id: string;
   kind: AlertKind;
@@ -85,6 +112,8 @@ interface AlertRow {
   phone_number_id: string;
   access_token_ciphertext: string;
   patient_wa_id: string;
+  patient_name: string | null;
+  short_code: string;
 }
 
 export function createAlertDeliveryHandler(deps: {
@@ -99,7 +128,8 @@ export function createAlertDeliveryHandler(deps: {
 
     const { rows } = await deps.db.query<AlertRow>(
       `select a.id, a.kind, a.summary, a.delivery_status, c.team_alert_wa_id, c.team_alert_template,
-              ch.phone_number_id, ch.access_token_ciphertext, p.wa_id as patient_wa_id
+              ch.phone_number_id, ch.access_token_ciphertext, p.wa_id as patient_wa_id, p.name as patient_name,
+              cv.short_code
        from staff_alerts a
        join clinics c on c.id = a.clinic_id
        join conversations cv on cv.id = a.conversation_id
@@ -122,28 +152,14 @@ export function createAlertDeliveryHandler(deps: {
       phoneNumberId: alert.phone_number_id,
       accessToken: decryptSecret(alert.access_token_ciphertext, deps.encryptionKey),
     };
-    const patient = formatPhone(alert.patient_wa_id);
-    const text = `${KIND_LABEL[alert.kind]}\nPaciente: ${patient}\n${alert.summary}`;
+    const patient = [alert.patient_name, formatPhone(alert.patient_wa_id)].filter(Boolean).join(" · ");
+    const text = `${KIND_LABEL[alert.kind]}\nPaciente: ${patient}\nConversa: #${alert.short_code}\n${alert.summary}\n\n${staffInstructions(alert.short_code)}`;
 
     try {
-      await deps.whatsapp.sendText(target, alert.team_alert_wa_id, text);
+      await sendToStaff(deps.whatsapp, target, alert.team_alert_wa_id, text, alert.team_alert_template);
     } catch (error) {
-      // Fora da janela de 24h com a recepção: só um template aprovado pode iniciar a conversa.
-      const windowClosed = error instanceof WhatsAppApiError && error.code === 131047;
-      if (!windowClosed || !alert.team_alert_template) {
-        await setStatus(deps.db, alert.id, "failed", describe(error));
-        throw error;
-      }
-      try {
-        await deps.whatsapp.sendTemplate(target, alert.team_alert_wa_id, {
-          name: alert.team_alert_template,
-          languageCode: "pt_BR",
-          bodyParams: [templateParam(`${KIND_LABEL[alert.kind]} | Paciente: ${patient} | ${alert.summary}`)],
-        });
-      } catch (templateError) {
-        await setStatus(deps.db, alert.id, "failed", describe(templateError));
-        throw templateError;
-      }
+      await setStatus(deps.db, alert.id, "failed", describe(error));
+      throw error;
     }
     await setStatus(deps.db, alert.id, "sent", null);
     log.info("alerta entregue à equipe");

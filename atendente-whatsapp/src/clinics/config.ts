@@ -73,8 +73,10 @@ export const clinicConfigSchema = z.strictObject({
       alert_whatsapp: z.coerce.string().regex(/^\d{10,15}$/, "só dígitos, com DDI e DDD: 5511999990000").optional(),
       /** Template aprovado na Meta (1 variável no corpo) para avisar fora da janela de 24h. */
       alert_template: z.string().regex(/^[a-z0-9_]+$/).optional(),
+      /** Outros números da equipe que podem responder pacientes e usar os comandos. */
+      staff_whatsapp: z.array(z.coerce.string().regex(/^\d{10,15}$/, "só dígitos, com DDI e DDD")).default([]),
     })
-    .default({}),
+    .default({ staff_whatsapp: [] }),
   services: z
     .array(serviceSchema)
     .default([])
@@ -171,8 +173,8 @@ export async function upsertClinic(
       `insert into clinics (slug, name, specialty, timezone, active, address, maps_url, phone_display,
                             cancellation_policy, payment_methods, insurance_notes, extra_info,
                             team_alert_wa_id, team_alert_template, slot_step_minutes, min_advance_minutes,
-                            max_advance_days, national_holidays)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                            max_advance_days, national_holidays, staff_wa_ids)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
        on conflict (slug) do update set
          name = excluded.name, specialty = excluded.specialty, timezone = excluded.timezone,
          active = excluded.active, address = excluded.address, maps_url = excluded.maps_url,
@@ -181,7 +183,7 @@ export async function upsertClinic(
          extra_info = excluded.extra_info, team_alert_wa_id = excluded.team_alert_wa_id,
          team_alert_template = excluded.team_alert_template, slot_step_minutes = excluded.slot_step_minutes,
          min_advance_minutes = excluded.min_advance_minutes, max_advance_days = excluded.max_advance_days,
-         national_holidays = excluded.national_holidays, updated_at = now()
+         national_holidays = excluded.national_holidays, staff_wa_ids = excluded.staff_wa_ids, updated_at = now()
        returning id`,
       [
         config.slug,
@@ -202,6 +204,7 @@ export async function upsertClinic(
         config.scheduling.min_advance_minutes,
         config.scheduling.max_advance_days,
         config.holidays.national,
+        config.team.staff_whatsapp,
       ],
     );
     const clinicId = clinic.rows[0]!.id;

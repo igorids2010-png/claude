@@ -29,6 +29,8 @@ team:
   # Opcional: template aprovado na Meta, com 1 variável no corpo, usado quando a recepção
   # não falou com o número nas últimas 24h (fora da janela, texto livre não é entregue).
   # alert_template: alerta_equipe
+  # Outros números da equipe que podem responder pacientes pela ponte (#CÓDIGO mensagem).
+  staff_whatsapp: ["5519911112222"]
 
 services:
   - key: avaliacao

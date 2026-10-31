@@ -3,6 +3,8 @@ import { decryptSecret } from "../lib/crypto.js";
 import type { Logger } from "../lib/logger.js";
 import type { Job } from "../queue/jobs.js";
 import { PermanentJobError, type JobHandler } from "../queue/worker.js";
+import { openHandoffActivity, releaseHandoff } from "../handoff/handoff.js";
+import { forwardToStaff } from "../handoff/staff.js";
 import { splitText, WhatsAppApiError, type SendTarget, type WhatsAppClient } from "../whatsapp/client.js";
 import { MEDIA_KINDS, READABLE_KINDS, type MessageKind } from "../whatsapp/payload.js";
 import type { PendingInbound, Responder } from "./responder.js";
@@ -14,6 +16,8 @@ export interface ProcessorDeps {
   responder: Responder;
   encryptionKey: string;
   logger: Logger;
+  /** Sem mensagem da equipe por esse tempo, o atendimento humano encerra e o bot volta. */
+  handoffAutoReleaseMs: number;
 }
 
 interface ConversationRow {
@@ -27,6 +31,10 @@ interface ConversationRow {
   phone_number_id: string;
   access_token_ciphertext: string;
   patient_wa_id: string;
+  patient_name: string | null;
+  short_code: string;
+  team_alert_wa_id: string | null;
+  team_alert_template: string | null;
 }
 
 interface PlannedReply {
@@ -51,10 +59,10 @@ export function createConversationProcessor(deps: ProcessorDeps): JobHandler {
     const pending = await loadPendingInbound(deps.db, conversation.conversation_id);
     if (pending.length === 0) return;
 
-    // Clínica desativada, ou a equipe assumiu a conversa: o bot fica em silêncio.
-    if (!conversation.clinic_active || !conversation.channel_active || conversation.status === "human") {
+    // Clínica desativada: só registra.
+    if (!conversation.clinic_active || !conversation.channel_active) {
       await markHandled(deps.db, pending);
-      log.info({ status: conversation.status }, "mensagens registradas sem resposta automática");
+      log.info("clínica ou canal inativo: mensagens registradas sem resposta");
       return;
     }
 
@@ -62,6 +70,48 @@ export function createConversationProcessor(deps: ProcessorDeps): JobHandler {
       phoneNumberId: conversation.phone_number_id,
       accessToken: decryptSecret(conversation.access_token_ciphertext, deps.encryptionKey),
     };
+
+    if (conversation.status === "human") {
+      const lastActivity = await openHandoffActivity(deps.db, conversation.conversation_id);
+      const stale = lastActivity !== null && Date.now() - lastActivity.getTime() > deps.handoffAutoReleaseMs;
+      if (stale) {
+        // A equipe não respondeu a tempo: o bot volta, para o paciente não ficar sem resposta.
+        await releaseHandoff(deps.db, conversation.conversation_id, "timeout");
+        conversation.status = "bot";
+        log.warn("atendimento humano sem resposta da equipe: conversa devolvida ao bot");
+      } else {
+        // Atendimento humano: o bot fica em silêncio e a recepção recebe as mensagens.
+        const forwarded = await forwardToStaff(
+          deps.whatsapp,
+          {
+            clinicId: conversation.clinic_id,
+            conversationId: conversation.conversation_id,
+            shortCode: conversation.short_code,
+            patientWaId: conversation.patient_wa_id,
+            patientName: conversation.patient_name,
+            staffWaId: conversation.team_alert_wa_id,
+            template: conversation.team_alert_template,
+            target,
+          },
+          pending.map((m) => ({ type: m.type, body: m.body })),
+        ).catch((error: unknown) => {
+          // Fora da janela de 24h e sem template: não há como entregar; as mensagens ficam no histórico.
+          if (error instanceof WhatsAppApiError && !error.retryable) {
+            log.warn({ err: error.message }, "não foi possível encaminhar à equipe");
+            return false;
+          }
+          throw error;
+        });
+        await deps.db.query(
+          `update messages set handled_at = now(), forwarded_at = case when $2 then now() else forwarded_at end, updated_at = now()
+           where id = any($1::uuid[])`,
+          [pending.map((m) => m.id), forwarded],
+        );
+        log.info({ forwarded }, "atendimento humano: mensagens encaminhadas à equipe");
+        return;
+      }
+    }
+
     const last = pending[pending.length - 1]!;
 
     // Marcar como lida é cortesia: se falhar, seguimos com a resposta.
@@ -173,7 +223,8 @@ async function loadConversation(db: Db, conversationId: string): Promise<Convers
     `select cv.id as conversation_id, cv.status, cv.disclosure_sent_at,
             c.id as clinic_id, c.name as clinic_name, c.active as clinic_active,
             ch.active as channel_active, ch.phone_number_id, ch.access_token_ciphertext,
-            p.wa_id as patient_wa_id
+            p.wa_id as patient_wa_id, p.name as patient_name, cv.short_code,
+            c.team_alert_wa_id, c.team_alert_template
      from conversations cv
      join clinics c on c.id = cv.clinic_id
      join clinic_channels ch on ch.id = cv.channel_id

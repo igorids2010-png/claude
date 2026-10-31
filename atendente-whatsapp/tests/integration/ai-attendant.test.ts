@@ -78,23 +78,23 @@ describe("atendente com IA", () => {
     ]);
   });
 
-  it("pedido de atendente: avisa o responsável e confirma ao paciente", async () => {
+  it("ferramentas: o conteúdo da resposta (com raciocínio) volta inalterado e o alerta chega à equipe", async () => {
     h = await createHarness({ responder: "claude" });
     h.claude.respond(
-      toolUse([{ name: "notify_team", input: { reason: "human_requested", summary: "Paciente quer falar com a recepção sobre reembolso." } }]),
-      text("Tudo bem! Já avisei o responsável, ele vai te responder por aqui."),
+      toolUse([{ name: "notify_team", input: { reason: "unanswered_question", summary: "Pergunta se a clínica emite nota fiscal." } }]),
+      text("Vou confirmar com a equipe e te retorno por aqui."),
     );
-    await say("quero falar com uma pessoa");
+    await say("vcs emitem nota fiscal?");
     await drain();
 
-    expect(toPatient().at(-1)).toBe("Tudo bem! Já avisei o responsável, ele vai te responder por aqui.");
-    expect(await alerts()).toEqual([{ kind: "human_requested", delivery_status: "sent" }]);
+    expect(toPatient().at(-1)).toBe("Vou confirmar com a equipe e te retorno por aqui.");
+    expect(await alerts()).toEqual([{ kind: "unanswered_question", delivery_status: "sent" }]);
     const [teamMessage] = toTeam();
-    expect(teamMessage).toContain("Paciente pediu atendimento humano");
+    expect(teamMessage).toContain("Dúvida que o atendente não soube responder");
     expect(teamMessage).toContain("+55 11 99999-0000");
-    expect(teamMessage).toContain("reembolso");
+    expect(teamMessage).toContain("nota fiscal");
+    expect(teamMessage).toMatch(/Conversa: #[0-9A-F]{5}/);
 
-    // O conteúdo da primeira resposta (com o bloco de raciocínio) volta inalterado na segunda chamada.
     const followUp = h.claude.requests[1]!.messages;
     const assistant = followUp.at(-2)!;
     expect(assistant.role).toBe("assistant");
@@ -107,9 +107,9 @@ describe("atendente com IA", () => {
 
   it("não repete o alerta se o modelo chamar a ferramenta duas vezes para a mesma mensagem", async () => {
     h = await createHarness({ responder: "claude" });
-    const call = { name: "notify_team", input: { reason: "complaint", summary: "Reclamou do atraso." } };
-    h.claude.respond(toolUse([call]), toolUse([call]), text("Sinto muito pelo atraso. Já avisei a equipe."));
-    await say("absurdo esperar 1h!!!");
+    const call = { name: "notify_team", input: { reason: "other", summary: "Quer saber se pode levar acompanhante." } };
+    h.claude.respond(toolUse([call]), toolUse([call]), text("Já avisei a equipe, eles te confirmam."));
+    await say("posso levar acompanhante?");
     await drain();
     expect(await alerts()).toHaveLength(1);
     const second = h.claude.requests[2]!.messages.at(-1)!.content as Array<{ content: string }>;
@@ -252,10 +252,10 @@ describe("entrega dos alertas para a equipe", () => {
   it("fora da janela de 24h, usa o template configurado", async () => {
     h = await createHarness({ responder: "claude", clinic: { team: { alert_whatsapp: TEAM_WA_ID, alert_template: "alerta_equipe" } } });
     h.claude.respond(
-      toolUse([{ name: "notify_team", input: { reason: "human_requested", summary: "Quer falar\ncom alguém." } }]),
+      toolUse([{ name: "notify_team", input: { reason: "other", summary: "Quer falar\ncom alguém sobre parceria." } }]),
       text("Já avisei!"),
     );
-    await say("atendente por favor");
+    await say("vcs fazem parceria com empresas?");
     await h.worker.runOnce(); // conversa
     h.graph.queue(h.graph.error(400, 131047));
     await drain(); // alerta
@@ -263,7 +263,7 @@ describe("entrega dos alertas para a equipe", () => {
     expect(template?.body.template).toMatchObject({ name: "alerta_equipe", language: { code: "pt_BR" } });
     const param = (template?.body.template as { components: Array<{ parameters: Array<{ text: string }> }> }).components[0]!.parameters[0]!.text;
     expect(param).not.toMatch(/\n/);
-    expect(param).toContain("Quer falar com alguém.");
+    expect(param).toContain("Quer falar com alguém sobre parceria.");
     expect((await alerts())[0]?.delivery_status).toBe("sent");
   });
 

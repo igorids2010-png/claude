@@ -126,7 +126,7 @@ describe("consulta de horários", () => {
   });
 
   it("clínica sem profissionais não recebe ferramentas de agenda", async () => {
-    expect(toolsFor({ schedulingEnabled: false }).map((t) => t.name)).toEqual(["notify_team", "request_data_deletion"]);
+    expect(toolsFor({ schedulingEnabled: false }).map((t) => t.name)).toEqual(["notify_team", "transfer_to_human", "request_data_deletion"]);
     expect(toolsFor({ schedulingEnabled: true }).map((t) => t.name)).toContain("confirm_pending_action");
   });
 });

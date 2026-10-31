@@ -12,6 +12,15 @@ import { createAlert, hasRecentAlert, type AlertKind } from "../team/alerts.js";
 import { loadHistory, type HistoryOptions } from "./history.js";
 import { buildSystemPrompt, buildTurnContext } from "./prompt.js";
 import { detectEmergency, emergencyText, replyCoversEmergency } from "./safety.js";
+import { detectHumanRequest } from "../handoff/detect.js";
+import {
+  HANDOFF_PATIENT_TEXT,
+  HANDOFF_UNRESOLVED_TEXT,
+  recentTranscript,
+  registerUnresolved,
+  resetUnresolved,
+  startHandoff,
+} from "../handoff/handoff.js";
 import { pendingActionsFor, type SchedulingDeps } from "../scheduling/service.js";
 import { runTool, toolsFor } from "./tools.js";
 import { recordUsage, usageCounts } from "./usage.js";
@@ -86,6 +95,36 @@ export function createClaudeResponder(options: ClaudeResponderOptions): Responde
         return [emergencyText(emergency)];
       };
 
+      // Pedido explícito de atendente: transfere direto, sem depender da IA (e sem custo).
+      if (!emergency && detectHumanRequest(patientText)) {
+        await startHandoff(options.db, {
+          clinicId: context.clinicId,
+          conversationId: context.conversationId,
+          reason: "patient_request",
+          summary: `Últimas mensagens:\n${await recentTranscript(options.db, context.conversationId)}`,
+          startedBy: "patient",
+          sourceMessageId: context.sourceMessageId,
+          jobMaxAttempts: options.jobMaxAttempts,
+        });
+        log.info("pedido explícito de atendente: conversa transferida");
+        return [HANDOFF_PATIENT_TEXT];
+      }
+
+      /** Mais uma tentativa sem solução; na segunda seguida, a conversa vai para a equipe. */
+      const unresolved = async (reply: string[]): Promise<string[]> => {
+        if (!(await registerUnresolved(options.db, context.conversationId))) return reply;
+        const { started } = await startHandoff(options.db, {
+          clinicId: context.clinicId,
+          conversationId: context.conversationId,
+          reason: "unresolved",
+          summary: `O atendente automático não conseguiu resolver em duas tentativas.\nÚltimas mensagens:\n${await recentTranscript(options.db, context.conversationId)}`,
+          startedBy: "system",
+          sourceMessageId: context.sourceMessageId,
+          jobMaxAttempts: options.jobMaxAttempts,
+        });
+        return started ? [...reply, HANDOFF_UNRESOLVED_TEXT] : reply;
+      };
+
       // Limites de uso: protegem contra abuso e contra uma conta alta no fim do mês.
       const counts = await usageCounts(options.db, context.clinicId, context.conversationId, profile.timezone);
       if (counts.conversationLastHour >= options.maxCallsPerConversationPerHour) {
@@ -113,6 +152,8 @@ export function createClaudeResponder(options: ClaudeResponderOptions): Responde
       const tools = toolsFor(profile);
 
       let reply = "";
+      let transferred = false;
+      let askedTeam = false;
       try {
         for (let round = 1; round <= MAX_ROUNDS; round++) {
           const response = await options.createMessage({
@@ -159,6 +200,8 @@ export function createClaudeResponder(options: ClaudeResponderOptions): Responde
               scheduling: profile.schedulingEnabled ? options.scheduling : null,
             });
             log.info({ tool: block.name, isError: outcome.isError }, "ferramenta executada");
+            if (outcome.transferred) transferred = true;
+            if (outcome.alerts.includes("unanswered_question")) askedTeam = true;
             results.push({ type: "tool_result", tool_use_id: block.id, content: outcome.content, is_error: outcome.isError });
           }
           messages.push({ role: "user", content: results });
@@ -172,9 +215,14 @@ export function createClaudeResponder(options: ClaudeResponderOptions): Responde
 
       if (!reply) {
         await alert("unanswered_question", `O atendente não conseguiu responder: "${patientText.slice(0, 300)}"`);
-        return withSafetyNet(COULD_NOT_ANSWER_TEXT);
+        const replies = await withSafetyNet(COULD_NOT_ANSWER_TEXT);
+        return transferred ? replies : unresolved(replies);
       }
-      return withSafetyNet(toWhatsAppFormatting(reply));
+      const replies = await withSafetyNet(toWhatsAppFormatting(reply));
+      if (transferred) return replies;
+      if (askedTeam) return unresolved(replies);
+      await resetUnresolved(options.db, context.conversationId);
+      return replies;
     },
   };
 }

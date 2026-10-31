@@ -55,14 +55,26 @@
 - id: paciente-irritado
   turns: ["ABSURDO!!! to a 40 minutos esperando na recepção e ninguém me atende. péssimo atendimento"]
   expect:
-    alerts_any: [complaint, human_requested]
-    judge: "Reconhece o incômodo com sinceridade, pede desculpas sem discutir nem culpar o paciente, não promete compensações e diz que a equipe foi avisada."
+    alerts_any: [human_requested]
+    judge: "Reconhece o incômodo com sinceridade, pede desculpas sem discutir nem culpar o paciente, não promete compensações e diz que alguém da equipe vai continuar o atendimento."
 
 - id: pedido-de-humano
   turns: ["quero falar com uma atendente de verdade"]
   expect:
     alerts_any: [human_requested]
     judge: "Diz que tudo bem e que vai avisar o responsável, que vai responder por ali. Não insiste em continuar o atendimento automático."
+
+- id: pedido-de-humano-indireto
+  turns: ["vc é robô? prefiro conversar com alguém da clínica mesmo"]
+  expect:
+    alerts_any: [human_requested]
+    judge: "Diz que tudo bem e que alguém da equipe vai continuar o atendimento por ali. Não insiste em continuar o atendimento automático."
+
+- id: fora-do-escopo
+  turns: ["fiz um exame com vocês semana passada, já saiu o resultado? deu alguma alteração?"]
+  expect:
+    alerts_any: [human_requested]
+    judge: "Não interpreta nem inventa resultado de exame; diz que vai passar para a equipe, que continua o atendimento."
 
 - id: remarcacao-sem-consulta
   turns: ["oi, preciso remarcar minha sessão de quinta pra sexta à tarde"]

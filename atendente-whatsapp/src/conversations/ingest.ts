@@ -1,7 +1,9 @@
 import type { Db } from "../db/db.js";
 import type { Logger } from "../lib/logger.js";
 import { findChannelByPhoneNumberId } from "../clinics/channels.js";
-import { enqueueConversationJob, type DebounceOptions } from "../queue/jobs.js";
+import { sameWaId } from "../handoff/phone.js";
+import { STAFF_COMMAND } from "../handoff/staff.js";
+import { enqueueConversationJob, enqueueJob, type DebounceOptions } from "../queue/jobs.js";
 import type { InboundMessage, ParsedWebhook, StatusUpdate } from "../whatsapp/payload.js";
 
 export interface IngestOptions extends DebounceOptions {
@@ -16,6 +18,8 @@ export interface IngestResult {
   /** Gravadas mas não respondidas (muito antigas ou só reações). */
   notEnqueued: number;
   statusesApplied: number;
+  /** Mensagens da equipe (comandos e respostas aos pacientes). */
+  staffMessages: number;
 }
 
 /** Status que podem evoluir para cada status novo (a Meta pode entregar fora de ordem). */
@@ -37,13 +41,15 @@ export async function ingestWebhook(
   options: IngestOptions,
   logger: Logger,
 ): Promise<IngestResult> {
-  const result: IngestResult = { stored: 0, duplicates: 0, unknownChannel: 0, notEnqueued: 0, statusesApplied: 0 };
+  const result: IngestResult = { stored: 0, duplicates: 0, unknownChannel: 0, notEnqueued: 0, statusesApplied: 0, staffMessages: 0 };
 
   for (const message of parsed.messages) {
     const outcome = await ingestMessage(db, message, options);
     if (outcome === "unknown_channel") {
       result.unknownChannel++;
       logger.warn({ phoneNumberId: message.phoneNumberId }, "mensagem para número sem clínica ativa");
+    } else if (outcome === "staff") {
+      result.staffMessages++;
     } else if (outcome === "duplicate") {
       result.duplicates++;
     } else {
@@ -58,12 +64,24 @@ export async function ingestWebhook(
   return result;
 }
 
-type MessageOutcome = "unknown_channel" | "duplicate" | "stored" | "enqueued";
+type MessageOutcome = "unknown_channel" | "duplicate" | "stored" | "enqueued" | "staff";
 
 async function ingestMessage(db: Db, message: InboundMessage, options: IngestOptions): Promise<MessageOutcome> {
   return db.transaction(async (tx) => {
     const channel = await findChannelByPhoneNumberId(tx, message.phoneNumberId);
     if (!channel || !channel.channel_active || !channel.clinic_active) return "unknown_channel";
+
+    const staffNumbers = [channel.team_alert_wa_id, ...(channel.staff_wa_ids ?? [])].filter((n): n is string => Boolean(n));
+    if (staffNumbers.some((number) => sameWaId(number, message.waId))) {
+      const staff = await tx.query<{ id: string }>(
+        `insert into staff_inbound (clinic_id, channel_id, from_wa_id, wa_message_id, type, body)
+         values ($1, $2, $3, $4, $5, $6)
+         on conflict (wa_message_id) do nothing returning id`,
+        [channel.clinic_id, channel.channel_id, message.waId, message.waMessageId, message.kind, message.body],
+      );
+      if (staff.rows[0]) await enqueueJob(tx, STAFF_COMMAND, { staffInboundId: staff.rows[0].id }, { maxAttempts: options.maxAttempts });
+      return staff.rows[0] ? "staff" : "duplicate";
+    }
 
     const patient = await tx.query<{ id: string }>(
       `insert into patients (clinic_id, wa_id) values ($1, $2)

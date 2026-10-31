@@ -3,8 +3,8 @@
 Sistema multi-clínica: o mesmo servidor atende várias clínicas, cada uma com seu número
 de WhatsApp (WhatsApp Cloud API oficial da Meta), sua configuração e sua agenda.
 
-> **Status: Fases 1, 2 e 3 concluídas** (webhook, fila, atendente com IA e agendamento com
-> Google Calendar). Próximas fases: transferência para humano, lembretes e o painel da clínica.
+> **Status: Fases 1 a 4 concluídas** (webhook, fila, atendente com IA, agendamento com Google
+> Calendar e atendimento humano). Próximas fases: lembretes e o painel da clínica.
 
 ## Como funciona
 
@@ -80,6 +80,39 @@ Com profissionais cadastrados, o atendente consulta, marca, remarca e cancela ho
 - **Remarcação atômica**: cancela o antigo e cria o novo na mesma transação.
 - Cada paciente só vê e altera os próprios agendamentos (pelo número de WhatsApp).
 
+### Atendimento humano (Fase 4)
+
+- **Quando a conversa vai para a equipe**: o paciente pede uma pessoa ("quero falar com uma
+  atendente": detectado sem a IA, transferência imediata e sem custo), a IA percebe irritação ou
+  um assunto que ela não resolve (resultado de exame, reembolso, cobrança...), ou o atendente não
+  resolveu em duas tentativas seguidas.
+- **A recepção recebe um resumo** no WhatsApp `team.alert_whatsapp`, com o motivo, o paciente, as
+  últimas mensagens e o **código da conversa** (ex.: `#A3F9C`).
+- **Durante o atendimento humano o bot fica em silêncio**, e cada mensagem do paciente é
+  encaminhada para a recepção (mídias aparecem como `[áudio]`, `[imagem]`...).
+- **A recepção conversa pelo próprio WhatsApp**, mandando mensagens para o número da clínica (o
+  número da API não pode ser usado no app do WhatsApp):
+
+  | Mensagem da recepção | O que acontece |
+  | --- | --- |
+  | `#A3F9C Olá, aqui é a Júlia...` | o paciente recebe o texto pelo número da clínica |
+  | `#A3F9C /bot` | devolve a conversa ao atendente automático |
+  | `#A3F9C /assumir` | a equipe assume uma conversa que estava com o bot |
+  | `/lista` | conversas em atendimento humano |
+  | qualquer outra coisa | mostra a ajuda |
+
+  Só os números em `team.alert_whatsapp` e `team.staff_whatsapp` são tratados como equipe.
+  Responder um paciente que estava com o bot já faz a equipe assumir a conversa.
+- **Sem resposta da equipe** por `HANDOFF_AUTO_RELEASE_HOURS` (padrão 12h), a próxima mensagem do
+  paciente devolve a conversa ao bot, para ninguém ficar sem resposta.
+- Pelo terminal: `npm run conversation:release -- <slug-da-clinica> <#CÓDIGO ou telefone>`.
+- Quando volta, o atendente automático vê no histórico o que a equipe respondeu.
+
+**Janela de 24h**: a Meta só entrega texto livre para quem escreveu ao número nas últimas 24h. Para
+a recepção receber alertas a qualquer hora, aprove um template (ver abaixo) e configure
+`team.alert_template`. Para o paciente, depois de 24h sem ele escrever, a recepção é avisada de
+que a mensagem não pôde ser entregue.
+
 ## Estrutura
 
 ```
@@ -90,6 +123,7 @@ src/
   http/webhook.ts        GET de verificação e POST de recebimento
   ai/                    prompt, histórico, ferramentas, rede de segurança, responder do Claude
   scheduling/            horários livres, feriados, agendamentos, Google Calendar
+  handoff/               transferência para humano, comandos e ponte com a recepção
   team/                  alertas para a equipe da clínica
   whatsapp/              assinatura, schema do payload, cliente da Graph API (retry/backoff)
   conversations/         ingest (gravação idempotente), processor (respostas), textos
@@ -132,7 +166,9 @@ debounce, mídias, retry sem duplicar envio, janela de 24h, job travado, concorr
 entre clínicas, montagem da requisição ao Claude, loop de ferramentas, alertas, emergência, falha e
 recusa da IA, limites de uso, registro de tokens, regras de agenda (expediente, almoço, duração,
 intervalo, feriados, bloqueios, antecedência), conflito de horário (inclusive simultâneo),
-confirmação em duas etapas, expiração de reserva, remarcação, cancelamento e Google Calendar.
+confirmação em duas etapas, expiração de reserva, remarcação, cancelamento, Google Calendar,
+transferência para humano (pedido explícito, IA, duas tentativas), silêncio do bot, ponte com a
+recepção, comandos, devolução ao bot e retorno automático por tempo.
 
 ### Suíte de conversas difíceis (Claude de verdade)
 
@@ -143,8 +179,8 @@ npm run eval:conversations -- --only emergencia-medica --repeat 3
 
 Precisa de `ANTHROPIC_API_KEY` (custa alguns centavos por rodada). Os casos estão em
 `evals/conversations.yaml`: pergunta de preço, preço não divulgado, serviço inexistente, pedido de
-diagnóstico e remédio, emergência, risco de suicídio, paciente irritado, pedido de atendente,
-remarcação, agendamento com confirmação, dia fechado, fora do horário, erros de digitação, mensagens confusas, tentativa de manipulação,
+diagnóstico e remédio, emergência, risco de suicídio, paciente irritado, pedido de atendente
+(direto e indireto), assunto fora do escopo, remarcação, agendamento com confirmação, dia fechado, fora do horário, erros de digitação, mensagens confusas, tentativa de manipulação,
 convênio não aceito, exclusão de dados e emergência veterinária. Cada caso tem verificações
 objetivas (ex.: "contém 192", "criou alerta de emergência") e um critério avaliado por um segundo
 modelo (`EVAL_JUDGE_MODEL`, padrão `claude-opus-5-5`). Rode sempre que mudar o prompt ou o modelo.
@@ -187,6 +223,16 @@ final do projeto.
    profissional) vai em `google_calendar_id` no YAML da clínica.
 
 Uma única conta de serviço atende todas as clínicas: cada profissional só compartilha a própria agenda.
+
+## Template de alerta para a equipe (opcional, recomendado)
+
+No WhatsApp Manager, em **Modelos de mensagem**, crie um template de categoria **Utilidade**, idioma
+**Português (BR)**, com uma variável no corpo, por exemplo:
+
+> Aviso do atendente da clínica: {{1}}
+
+Depois de aprovado, coloque o nome dele em `team.alert_template` no YAML da clínica. Ele só é usado
+quando a recepção não escreveu para o número da clínica nas últimas 24h.
 
 ## Cadastrando uma clínica
 

@@ -43,6 +43,9 @@ const envSchema = z.object({
   /** Minutos que um horário proposto fica reservado esperando a confirmação do paciente. */
   SCHEDULING_HOLD_MINUTES: z.coerce.number().int().min(1).max(240).default(20),
 
+  /** Sem mensagem da equipe por esse tempo, o atendimento humano encerra e o bot volta a responder. */
+  HANDOFF_AUTO_RELEASE_HOURS: z.coerce.number().positive().default(12),
+
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
   JOB_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
